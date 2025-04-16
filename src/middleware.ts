@@ -7,24 +7,24 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
   // Add security headers
-  // src/middleware.ts
   response.headers.set(
     "Content-Security-Policy",
     "default-src 'self'; " +
-      "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; " +
+      "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://js.stripe.com; " +
       "style-src 'self' 'unsafe-inline'; " +
-      "img-src 'self' data: blob: https://www.google.com https://media.discordapp.net; " + // Allow Google images // Allows images from discord
+      "img-src 'self' data: blob: https://media.discordapp.net https://www.google.com https://sitechecker.pro https://*.googleapis.com https://*.stripe.com; " +
       "font-src 'self'; " +
       "connect-src 'self' " +
       "https://*.firebaseio.com " +
       "https://*.googleapis.com " +
-      "https://firestore.googleapis.com " + // Add this explicitly
+      "https://firestore.googleapis.com " +
       "https://firebaseappcheck.googleapis.com " +
       "https://identitytoolkit.googleapis.com " +
       "https://securetoken.googleapis.com " +
-      "wss://*.firebaseio.com " + // WebSocket connections
-      "https://*.cloudfunctions.net; " + // For Firebase Functions
-      "frame-src 'self' https://*.firebaseapp.com; " +
+      "wss://*.firebaseio.com " +
+      "https://*.cloudfunctions.net " +
+      "https://api.stripe.com; " + // Add Stripe API
+      "frame-src 'self' https://*.firebaseapp.com https://js.stripe.com https://hooks.stripe.com; " + // Allow Stripe frames
       "object-src 'none'; " +
       "base-uri 'self';"
   );
