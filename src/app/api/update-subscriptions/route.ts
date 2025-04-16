@@ -8,37 +8,40 @@ export async function GET(req: NextRequest) {
     // Check for admin secret key to prevent unauthorized access
     const { searchParams } = new URL(req.url);
     const secretKey = searchParams.get("secretKey");
-    
-    if (secretKey !== process.env.ADMIN_SECRET_KEY) {
+
+    if (
+      !secretKey ||
+      !safeCompare(secretKey, process.env.ADMIN_SECRET_KEY || "")
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
+
     // Get all users from Firestore
-    const usersRef = adminDb.collection('users');
+    const usersRef = adminDb.collection("users");
     const snapshot = await usersRef.get();
-    
+
     if (snapshot.empty) {
       return NextResponse.json({ message: "No users found" });
     }
-    
+
     let updatedCount = 0;
     let errorCount = 0;
-    
+
     // Process each user
     for (const doc of snapshot.docs) {
       const userData = doc.data();
-      
+
       // Only update users without a subscription status
       if (!userData.subscriptionStatus) {
         try {
           // If they've paid, set status to active; otherwise, set to pending
           const status = userData.hasPaid ? "active" : "pending";
-          
-          await adminDb.collection('users').doc(doc.id).update({
+
+          await adminDb.collection("users").doc(doc.id).update({
             subscriptionStatus: status,
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
           });
-          
+
           updatedCount++;
         } catch (error) {
           console.error(`Error updating user ${doc.id}:`, error);
@@ -46,9 +49,9 @@ export async function GET(req: NextRequest) {
         }
       }
     }
-    
-    return NextResponse.json({ 
-      message: `Updated ${updatedCount} users. Errors: ${errorCount}` 
+
+    return NextResponse.json({
+      message: `Updated ${updatedCount} users. Errors: ${errorCount}`,
     });
   } catch (error) {
     console.error("Error processing update:", error);
