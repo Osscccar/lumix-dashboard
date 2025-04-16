@@ -1,6 +1,7 @@
 // src/app/api/update-subscriptions/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
+import { safeCompare } from "@/utils/security";
 
 // This is an admin-only route that updates all existing users with missing subscription status
 export async function GET(req: NextRequest) {
