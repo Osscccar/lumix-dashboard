@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-satoshi);
+  --font-heading: var(--font-unbounded);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ffffff;
+    --foreground: #ffffff;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-satoshi), sans-serif;
+}
+
+/* Adding utility class for Unbounded font usage */
+.font-unbounded {
+  font-family: var(--font-unbounded), sans-serif;
+}
+
+.browser-mockup {
+  transition: all 0.3s ease;
+}
+
+.perspective-800 {
+  perspective: 800px;
+}
+
+.rotate-y-1 {
+  transform: rotateY(1deg);
+}
+
+.rotate-x-1 {
+  transform: rotateX(1deg);
+}
+
+.browser-mockup {
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 25px, rgba(0, 0, 0, 0.04) 0px 6px 10px;
+}

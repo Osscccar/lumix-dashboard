@@ -1,0 +1,49 @@
+// src/components/firebase-test.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, getDocs } from "firebase/firestore";
+
+export default function FirebaseTest() {
+  const [authStatus, setAuthStatus] = useState("Initializing Auth...");
+  const [dbStatus, setDbStatus] = useState("Initializing Firestore...");
+
+  useEffect(() => {
+    // Test Auth
+    try {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setAuthStatus(user ? `Auth working: User ${user.email}` : "Auth working: No user");
+      });
+
+      return () => unsubscribe();
+    } catch (error: unknown) {
+      // Handle the error safely with type checking
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      setAuthStatus(`Auth error: ${errorMessage}`);
+    }
+
+    // Test Firestore
+    async function testFirestore() {
+      try {
+        await getDocs(collection(db, "test-collection"));
+        setDbStatus("Firestore working");
+      } catch (error: unknown) {
+        // Handle the error safely with type checking
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        setDbStatus(`Firestore error: ${errorMessage}`);
+      }
+    }
+
+    testFirestore();
+  }, []);
+
+  return (
+    <div style={{ padding: "20px", backgroundColor: "#f5f5f5", borderRadius: "5px", margin: "20px" }}>
+      <h2>Firebase Status</h2>
+      <p><strong>Auth:</strong> {authStatus}</p>
+      <p><strong>Firestore:</strong> {dbStatus}</p>
+    </div>
+  );
+}
