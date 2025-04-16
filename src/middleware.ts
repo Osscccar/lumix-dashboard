@@ -13,7 +13,7 @@ export function middleware(request: NextRequest) {
     "default-src 'self'; " +
       "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; " +
       "style-src 'self' 'unsafe-inline'; " +
-      "img-src 'self' data: blob: https://www.google.com; " + // Allow Google images
+      "img-src 'self' data: blob: https://www.google.com https://media.discordapp.net; " + // Allow Google images // Allows images from discord
       "font-src 'self'; " +
       "connect-src 'self' " +
       "https://*.firebaseio.com " +
