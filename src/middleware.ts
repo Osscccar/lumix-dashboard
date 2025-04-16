@@ -7,15 +7,24 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
   // Add security headers
+  // src/middleware.ts
   response.headers.set(
     "Content-Security-Policy",
     "default-src 'self'; " +
-      "script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'; " +
+      "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; " +
       "style-src 'self' 'unsafe-inline'; " +
-      "img-src 'self' data: blob:; " +
+      "img-src 'self' data: blob: https://www.google.com; " + // Allow Google images
       "font-src 'self'; " +
-      "connect-src 'self' https://firebaseappcheck.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; " +
-      "frame-src 'self'; " +
+      "connect-src 'self' " +
+      "https://*.firebaseio.com " +
+      "https://*.googleapis.com " +
+      "https://firestore.googleapis.com " + // Add this explicitly
+      "https://firebaseappcheck.googleapis.com " +
+      "https://identitytoolkit.googleapis.com " +
+      "https://securetoken.googleapis.com " +
+      "wss://*.firebaseio.com " + // WebSocket connections
+      "https://*.cloudfunctions.net; " + // For Firebase Functions
+      "frame-src 'self' https://*.firebaseapp.com; " +
       "object-src 'none'; " +
       "base-uri 'self';"
   );
