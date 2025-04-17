@@ -510,7 +510,7 @@ export default function SignInPage() {
                         handleVerificationCodeChange(index, e.target.value)
                       }
                       onKeyDown={(e) => handleVerificationKeyDown(index, e)}
-                      className="w-11 h-11 text-center text-xl font-bold border-2 border-gray-300 rounded-md focus:border-[#F58327] focus:outline-none"
+                      className="w-11 h-11 text-center text-xl text-black font-bold border-2 border-gray-300 rounded-md focus:border-[#F58327] focus:outline-none"
                     />
                   ))}
                 </div>
