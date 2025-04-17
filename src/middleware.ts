@@ -6,11 +6,17 @@ export function middleware(request: NextRequest) {
   // Get response
   const response = NextResponse.next();
 
+  // Check if in development mode
+  const isDev = process.env.NODE_ENV === "development";
+
   // Add security headers
   response.headers.set(
     "Content-Security-Policy",
     "default-src 'self'; " +
-      "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://js.stripe.com; " +
+      // Add unsafe-eval for development mode
+      `script-src 'self' 'unsafe-inline' ${
+        isDev ? "'unsafe-eval'" : ""
+      } https://cdnjs.cloudflare.com https://js.stripe.com https://apis.google.com https://*.googleapis.com; ` +
       "style-src 'self' 'unsafe-inline'; " +
       "img-src 'self' data: blob: https://media.discordapp.net https://www.google.com https://sitechecker.pro https://*.googleapis.com https://*.stripe.com; " +
       "font-src 'self'; " +
@@ -23,8 +29,12 @@ export function middleware(request: NextRequest) {
       "https://securetoken.googleapis.com " +
       "wss://*.firebaseio.com " +
       "https://*.cloudfunctions.net " +
-      "https://api.stripe.com; " + // Add Stripe API
-      "frame-src 'self' https://*.firebaseapp.com https://js.stripe.com https://hooks.stripe.com; " + // Allow Stripe frames
+      "https://api.stripe.com " +
+      // Add localhost connections for development
+      (isDev ? "localhost:* ws://localhost:* " : "") +
+      "; " +
+      // Add Google APIs to frame-src
+      "frame-src 'self' https://*.firebaseapp.com https://js.stripe.com https://hooks.stripe.com https://apis.google.com; " +
       "object-src 'none'; " +
       "base-uri 'self';"
   );

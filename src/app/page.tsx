@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useFirebase } from "@/components/firebase-provider";
 import { doc, setDoc, getFirestore } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import Image, { StaticImageData } from "next/image";
 import lumixlogo from "@/app/public/images/image.png";
 import launchLogo from "@/app/public/images/launch.png";
@@ -37,6 +37,7 @@ const planIcons: Record<string, StaticImageData> = {
   "enterprise-yearly": enterpriseLogo,
   "enterprise-monthly": enterpriseLogo,
 };
+
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,6 +52,21 @@ export default function SignInPage() {
   const [processing, setProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("Processing...");
 
+  // 2FA states
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState([
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+  ]);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [tempUserCredential, setTempUserCredential] = useState<any>(null);
+  const verificationInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   // Check for plan parameter in URL
   const planParam = searchParams.get("plan");
 
@@ -58,6 +74,85 @@ export default function SignInPage() {
   const planParts = planParam ? planParam.split("-") : [];
   const planType = planParts[0] || "";
   const billingCycle = planParts[1] || "";
+
+  // Initialize verification refs array
+  useEffect(() => {
+    // Initialize the refs array with enough slots
+    verificationInputRefs.current = Array(6).fill(null);
+  }, []);
+
+  // Handle input change for verification code
+  const handleVerificationCodeChange = (index: number, value: string) => {
+    if (value.length <= 1) {
+      const newCode = [...verificationCode];
+      newCode[index] = value;
+      setVerificationCode(newCode);
+
+      // Auto-focus next input
+      if (value && index < 5) {
+        verificationInputRefs.current[index + 1]?.focus();
+      }
+    }
+  };
+
+  // Handle key down for verification code
+  const handleVerificationKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !verificationCode[index] && index > 0) {
+      // Move to previous input when backspace is pressed on an empty input
+      verificationInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  // Function to send verification code
+  const sendVerificationCode = async (userEmail: string) => {
+    try {
+      const response = await fetch("/api/send-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send verification code");
+      }
+
+      setVerificationEmail(userEmail);
+      return true;
+    } catch (error) {
+      console.error("Error sending verification code:", error);
+      setError(
+        error instanceof Error ? error.message : "An unexpected error occurred"
+      );
+      return false;
+    }
+  };
+
+  // Function to verify code
+  const verifyCode = async (userEmail: string, code: string) => {
+    try {
+      const response = await fetch("/api/send-verification", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail, code }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to verify code");
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error verifying code:", error);
+      setError(
+        error instanceof Error ? error.message : "Invalid verification code"
+      );
+      return false;
+    }
+  };
 
   // Function to redirect to Stripe payment
   const redirectToStripePayment = (
@@ -81,10 +176,121 @@ export default function SignInPage() {
     }
   };
 
+  // Handle resend verification code
+  const handleResendCode = async () => {
+    setProcessing(true);
+    await sendVerificationCode(verificationEmail);
+    setProcessing(false);
+  };
+
+  // Handle verification code submission
+  const handleVerifyCode = async () => {
+    setIsVerifying(true);
+    setError("");
+
+    const code = verificationCode.join("");
+
+    if (code.length !== 6) {
+      setError("Please enter all 6 digits of the verification code");
+      setIsVerifying(false);
+      return;
+    }
+
+    try {
+      const verified = await verifyCode(verificationEmail, code);
+
+      if (!verified) {
+        throw new Error("Invalid verification code");
+      }
+
+      // If we're registering and have temp credentials
+      if (isRegistering && tempUserCredential) {
+        await completeRegistration(tempUserCredential);
+      } else if (!isRegistering) {
+        // For sign in, we already have the user authenticated, just proceed
+        setShowVerification(false);
+        setProcessing(false);
+        setIsVerifying(false);
+      }
+    } catch (error) {
+      console.error("Verification error:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to verify code"
+      );
+      setIsVerifying(false);
+    }
+  };
+
+  // Complete registration after successful verification
+  const completeRegistration = async (userCredential: any) => {
+    try {
+      setProcessingMessage("Setting up your profile...");
+
+      const newUser = userCredential.user;
+      const db = getFirestore();
+      let extractedPlanType: string | null = planType || null;
+      let extractedBillingCycle: string | null = billingCycle || null;
+      let extractedSelectedPlan: string | null = planParam || null;
+
+      // If no plan in URL, check sessionStorage
+      if (!extractedSelectedPlan) {
+        const storedPlan =
+          typeof window !== "undefined"
+            ? sessionStorage.getItem("selectedPlan")
+            : null;
+
+        if (storedPlan) {
+          extractedSelectedPlan = storedPlan;
+          const parts = storedPlan.split("-");
+          extractedPlanType = parts.length > 0 ? parts[0] : null;
+          extractedBillingCycle = parts.length > 1 ? parts[1] : null;
+        }
+      }
+
+      const userDocData = {
+        email: verificationEmail,
+        firstName,
+        lastName,
+        phoneNumber,
+        hasPaid: false,
+        completedQuestionnaire: false,
+        createdAt: new Date().toISOString(),
+        selectedPlan: extractedSelectedPlan || null,
+        planType: extractedPlanType || null,
+        billingCycle: extractedBillingCycle || null,
+        emailVerified: true,
+        verifiedAt: new Date().toISOString(),
+      };
+
+      await setDoc(doc(db, "users", newUser.uid), userDocData);
+
+      // Reset states
+      setShowVerification(false);
+      setIsVerifying(false);
+      setTempUserCredential(null);
+
+      // Redirect based on plan parameter
+      if (planParam) {
+        redirectToStripePayment(newUser.uid, verificationEmail, planParam);
+      } else {
+        router.push("/pricing");
+      }
+    } catch (error) {
+      console.error("Error completing registration:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to complete registration"
+      );
+      setIsVerifying(false);
+      setProcessing(false);
+    }
+  };
+
   // Redirect logic based on user state
   useEffect(() => {
-    if (!loading && user && !processing) {
-      // User is authenticated (and we're not in the middle of registration)
+    if (!loading && user && !processing && !showVerification) {
+      // User is authenticated (and we're not in the middle of verification)
       if (!userData?.hasPaid) {
         if (planParam) {
           // If a plan is specified in URL, redirect to Stripe
@@ -101,7 +307,15 @@ export default function SignInPage() {
         router.push("/dashboard");
       }
     }
-  }, [loading, user, userData, router, processing, planParam]);
+  }, [
+    loading,
+    user,
+    userData,
+    router,
+    processing,
+    planParam,
+    showVerification,
+  ]);
 
   // Check if we should show registration form based on presence of plan parameter
   useEffect(() => {
@@ -113,91 +327,50 @@ export default function SignInPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
-    // Normal authentication flow
     setProcessing(true);
     setProcessingMessage("Processing...");
 
     try {
       if (isRegistering) {
-        // Register new user
+        // Validate required fields
         if (!firstName || !lastName || !phoneNumber) {
           throw new Error("All fields are required for registration");
         }
 
-        console.log("Starting registration process...");
+        // Step 1: Create the authentication user
         setProcessingMessage("Creating your account...");
 
-        // Step 1: Create the authentication user
         const newUser = await signUp(email, password, {
           firstName,
           lastName,
           phoneNumber,
         });
 
-        console.log("Auth user created successfully:", newUser.uid);
+        // Store temporary credentials
+        setTempUserCredential(newUser);
 
-        // Instead of verification, directly set up the user profile
-        setProcessingMessage("Setting up your profile...");
-
-        const db = getFirestore();
-        let extractedPlanType: string | null = planType || null;
-        let extractedBillingCycle: string | null = billingCycle || null;
-        let extractedSelectedPlan: string | null = planParam || null;
-
-        // If no plan in URL, check sessionStorage (for plans redirect flow)
-        if (!extractedSelectedPlan) {
-          const storedPlan =
-            typeof window !== "undefined"
-              ? sessionStorage.getItem("selectedPlan")
-              : null;
-
-          if (storedPlan) {
-            extractedSelectedPlan = storedPlan;
-            const parts = storedPlan.split("-");
-            extractedPlanType = parts.length > 0 ? parts[0] : null;
-            extractedBillingCycle = parts.length > 1 ? parts[1] : null;
-            console.log(
-              `Found plan in sessionStorage: ${extractedSelectedPlan} (${extractedPlanType}, ${extractedBillingCycle})`
-            );
-          }
+        // Send verification code and show verification UI
+        const sent = await sendVerificationCode(email);
+        if (!sent) {
+          throw new Error("Failed to send verification code");
         }
 
-        console.log(
-          `Creating user with plan: ${extractedSelectedPlan}, type: ${extractedPlanType}, cycle: ${extractedBillingCycle}`
-        );
-
-        const userDocData = {
-          email: email,
-          firstName,
-          lastName,
-          phoneNumber,
-          hasPaid: false,
-          completedQuestionnaire: false,
-          createdAt: new Date().toISOString(),
-          selectedPlan: extractedSelectedPlan || null,
-          planType: extractedPlanType || null,
-          billingCycle: extractedBillingCycle || null,
-          emailVerified: true, // Auto-verify email for now
-        };
-
-        await setDoc(doc(db, "users", newUser.uid), userDocData);
-        console.log("Firestore document created successfully");
-
-        // Redirect based on plan parameter
-        if (planParam) {
-          console.log("Redirecting to Stripe payment");
-          redirectToStripePayment(newUser.uid, email, planParam);
-        } else {
-          console.log("Redirecting to pricing page");
-          router.push("/pricing");
-        }
+        setVerificationEmail(email);
+        setShowVerification(true);
+        setProcessing(false);
       } else {
         // Sign in existing user
         setProcessingMessage("Signing in...");
         const userCredential = await signIn(email, password);
 
-        // Skip verification and directly handle redirection in the useEffect
+        // Send verification code for 2FA
+        const sent = await sendVerificationCode(email);
+        if (!sent) {
+          throw new Error("Failed to send verification code");
+        }
+
+        setVerificationEmail(email);
+        setShowVerification(true);
         setProcessing(false);
       }
     } catch (error) {
@@ -218,19 +391,31 @@ export default function SignInPage() {
     exit: { opacity: 0 },
   };
 
+  // Modal animation variants
+  const modalVariants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.95 },
+  };
+
   // Redirect to pricing if visitor directly hits the main URL without a plan or auth
-  // We're modifying this as per new requirements to keep users on the sign-in page
   useEffect(() => {
     if (!loading && !user && !planParam && window.location.pathname === "/") {
       // Check if this is a logout action - keep this logic
       const fromLogout = searchParams.get("from") === "logout";
-
-      // We're removing the auto-redirect to pricing since we now want users
-      // to be able to register directly on the sign-in page
     }
   }, [loading, user, planParam, searchParams]);
 
-  if (loading || processing) {
+  // Focus on first input for verification code
+  useEffect(() => {
+    if (showVerification && verificationInputRefs.current[0]) {
+      setTimeout(() => {
+        verificationInputRefs.current[0]?.focus();
+      }, 100);
+    }
+  }, [showVerification]);
+
+  if (loading || (processing && !showVerification)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
         <motion.div
@@ -270,217 +455,322 @@ export default function SignInPage() {
         <div className="flex justify-center mb-4">
           <Image src={lumixlogo} alt="Lumix Logo" width={100} height={40} />
         </div>
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold tracking-tight text-white">
-            {isRegistering ? "Create your account" : "Sign in to your account"}
-          </h2>
-          <div className="flex flex-row justify-center items-center mt-2">
-            {planParam && planIcons[planParam] && (
-              <div className="flex mr-2 mt-2">
-                <Image
-                  src={planIcons[planParam]}
-                  alt={`Plan icon for ${planParam}`}
-                  width={30}
-                  height={30}
-                  className="h-6 w-6 rounded-sm"
-                />
-              </div>
-            )}
-            <p className="flex mt-2  text-gray-400 ">
-              {isRegistering && planParam
-                ? `Register for the ${
-                    planType.charAt(0).toUpperCase() + planType.slice(1)
-                  } ${
-                    billingCycle.charAt(0).toUpperCase() + billingCycle.slice(1)
-                  } Plan`
-                : isRegistering
-                ? "Register to start your website project"
-                : "Sign in to access your website project dashboard"}
-            </p>
-          </div>
-        </div>
 
-        <AnimatePresence mode="wait">
-          {error && (
+        {/* Verification Modal */}
+        <AnimatePresence>
+          {showVerification && (
             <motion.div
-              className="mb-6 px-4 py-3 border-l-4 border-red-500 bg-black"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              <div className="text-red-400">{error}</div>
+              <motion.div
+                className="bg-white rounded-xl p-6 w-full max-w-md relative"
+                variants={modalVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+              >
+                <div className="text-center mb-5">
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-blue-50 p-3 rounded-full">
+                      <ShieldCheck className="h-8 w-8 text-[#F58327]" />
+                    </div>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-800">
+                    Authenticate Your Account
+                  </h2>
+                  <p className="text-gray-600 mt-2 text-sm">
+                    Protecting your account is our top priority. Please confirm
+                    your account by entering the authentication code sent to
+                    <span className="font-medium">
+                      {" "}
+                      {verificationEmail.substring(0, 3)}***
+                      {verificationEmail.substring(
+                        verificationEmail.lastIndexOf("@") - 1
+                      )}
+                    </span>
+                    .
+                  </p>
+                </div>
+
+                <div className="flex gap-2 justify-center mb-6">
+                  {verificationCode.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(el) => {
+                        verificationInputRefs.current[index] = el;
+                      }}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) =>
+                        handleVerificationCodeChange(index, e.target.value)
+                      }
+                      onKeyDown={(e) => handleVerificationKeyDown(index, e)}
+                      className="w-11 h-11 text-center text-xl font-bold border-2 border-gray-300 rounded-md focus:border-[#F58327] focus:outline-none"
+                    />
+                  ))}
+                </div>
+
+                {error && (
+                  <div className="mb-4 text-sm text-red-500 text-center">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleVerifyCode}
+                    disabled={isVerifying}
+                    className="px-5 py-2 bg-[#F58327] text-white rounded-md text-base font-medium hover:bg-[#e67016] transition-colors duration-300 disabled:opacity-70"
+                  >
+                    {isVerifying ? (
+                      <div className="flex items-center">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Verifying...
+                      </div>
+                    ) : (
+                      "Submit"
+                    )}
+                  </button>
+                </div>
+
+                <div className="text-center text-sm text-gray-600 mt-4">
+                  If you didn't receive a code:
+                  <button
+                    onClick={handleResendCode}
+                    disabled={processing}
+                    className="ml-1 text-[#F58327] hover:text-[#e67016] font-medium disabled:opacity-70"
+                  >
+                    Request a new code
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={isRegistering ? "register" : "signin"}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            variants={fadeIn}
-            transition={{ duration: 0.3 }}
-          >
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="email-address"
-                    className="block text-sm font-medium text-gray-300 mb-1"
-                  >
-                    Email Address
-                  </label>
-                  <input
-                    id="email-address"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
-                    placeholder="Enter your email"
-                    style={{ backgroundColor: "transparent" }}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-gray-300 mb-1"
-                  >
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete={
-                      isRegistering ? "new-password" : "current-password"
-                    }
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
-                    placeholder="Enter your password"
-                    style={{ backgroundColor: "transparent" }}
-                  />
-                </div>
-
-                {isRegistering && (
-                  <>
-                    <div>
-                      <label
-                        htmlFor="first-name"
-                        className="block text-sm font-medium text-gray-300 mb-1"
-                      >
-                        First Name
-                      </label>
-                      <input
-                        id="first-name"
-                        name="firstName"
-                        type="text"
-                        autoComplete="given-name"
-                        required
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
-                        placeholder="Enter your first name"
-                        style={{ backgroundColor: "transparent" }}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="last-name"
-                        className="block text-sm font-medium text-gray-300 mb-1"
-                      >
-                        Last Name
-                      </label>
-                      <input
-                        id="last-name"
-                        name="lastName"
-                        type="text"
-                        autoComplete="family-name"
-                        required
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
-                        placeholder="Enter your last name"
-                        style={{ backgroundColor: "transparent" }}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="phone-number"
-                        className="block text-sm font-medium text-gray-300 mb-1"
-                      >
-                        Phone Number
-                      </label>
-                      <input
-                        id="phone-number"
-                        name="phoneNumber"
-                        type="tel"
-                        autoComplete="tel"
-                        required
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58326] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
-                        placeholder="Enter your phone number"
-                        style={{ backgroundColor: "transparent" }}
-                      />
-                    </div>
-                  </>
+        {!showVerification && (
+          <>
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold tracking-tight text-white">
+                {isRegistering
+                  ? "Create your account"
+                  : "Sign in to your account"}
+              </h2>
+              <div className="flex flex-row justify-center items-center mt-2">
+                {planParam && planIcons[planParam] && (
+                  <div className="flex mr-2 mt-2">
+                    <Image
+                      src={planIcons[planParam]}
+                      alt={`Plan icon for ${planParam}`}
+                      width={30}
+                      height={30}
+                      className="h-6 w-6 rounded-sm"
+                    />
+                  </div>
                 )}
+                <p className="flex mt-2 text-gray-400">
+                  {isRegistering && planParam
+                    ? `Register for the ${
+                        planType.charAt(0).toUpperCase() + planType.slice(1)
+                      } ${
+                        billingCycle.charAt(0).toUpperCase() +
+                        billingCycle.slice(1)
+                      } Plan`
+                    : isRegistering
+                    ? "Register to start your website project"
+                    : "Sign in to access your website project dashboard"}
+                </p>
               </div>
+            </div>
 
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  disabled={processing}
-                  className="cursor-pointer relative flex items-center justify-center w-full bg-[#F58327] text-white text-lg rounded-full px-8 py-3 min-h-[54px] disabled:opacity-70 disabled:cursor-not-allowed transition-colors duration-200 hover:bg-[#e67016]"
+            <AnimatePresence mode="wait">
+              {error && (
+                <motion.div
+                  className="mb-6 px-4 py-3 border-l-4 border-red-500 bg-black"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
                 >
-                  {processing ? (
-                    <div className="flex items-center">
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Processing...
-                    </div>
-                  ) : isRegistering ? (
-                    "Register"
-                  ) : (
-                    "Sign in"
-                  )}
-                </button>
-              </div>
+                  <div className="text-red-400">{error}</div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-              <div className="text-center pt-4">
-                {isRegistering ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsRegistering(false);
-                      // Remove plan parameter from URL when switching to sign in
-                      if (planParam) {
-                        router.push("/");
-                      }
-                    }}
-                    className="cursor-pointer text-[#F58327] hover:text-[#e67016] transition-colors duration-200"
-                  >
-                    Already have an account? Sign in
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsRegistering(true)}
-                    className="cursor-pointer text-[#F58327] hover:text-[#e67016] transition-colors duration-200"
-                  >
-                    Don't have an account? Register now
-                  </button>
-                )}
-              </div>
-            </form>
-          </motion.div>
-        </AnimatePresence>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={isRegistering ? "register" : "signin"}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={fadeIn}
+                transition={{ duration: 0.3 }}
+              >
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                  <div className="space-y-4">
+                    <div>
+                      <label
+                        htmlFor="email-address"
+                        className="block text-sm font-medium text-gray-300 mb-1"
+                      >
+                        Email Address
+                      </label>
+                      <input
+                        id="email-address"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
+                        placeholder="Enter your email"
+                        style={{ backgroundColor: "transparent" }}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="password"
+                        className="block text-sm font-medium text-gray-300 mb-1"
+                      >
+                        Password
+                      </label>
+                      <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        autoComplete={
+                          isRegistering ? "new-password" : "current-password"
+                        }
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
+                        placeholder="Enter your password"
+                        style={{ backgroundColor: "transparent" }}
+                      />
+                    </div>
+
+                    {isRegistering && (
+                      <>
+                        <div>
+                          <label
+                            htmlFor="first-name"
+                            className="block text-sm font-medium text-gray-300 mb-1"
+                          >
+                            First Name
+                          </label>
+                          <input
+                            id="first-name"
+                            name="firstName"
+                            type="text"
+                            autoComplete="given-name"
+                            required
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
+                            placeholder="Enter your first name"
+                            style={{ backgroundColor: "transparent" }}
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="last-name"
+                            className="block text-sm font-medium text-gray-300 mb-1"
+                          >
+                            Last Name
+                          </label>
+                          <input
+                            id="last-name"
+                            name="lastName"
+                            type="text"
+                            autoComplete="family-name"
+                            required
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
+                            placeholder="Enter your last name"
+                            style={{ backgroundColor: "transparent" }}
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="phone-number"
+                            className="block text-sm font-medium text-gray-300 mb-1"
+                          >
+                            Phone Number
+                          </label>
+                          <input
+                            id="phone-number"
+                            name="phoneNumber"
+                            type="tel"
+                            autoComplete="tel"
+                            required
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58326] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
+                            placeholder="Enter your phone number"
+                            style={{ backgroundColor: "transparent" }}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      type="submit"
+                      disabled={processing}
+                      className="cursor-pointer relative flex items-center justify-center w-full bg-[#F58327] text-white text-lg rounded-full px-8 py-3 min-h-[54px] disabled:opacity-70 disabled:cursor-not-allowed transition-colors duration-200 hover:bg-[#e67016]"
+                    >
+                      {processing ? (
+                        <div className="flex items-center">
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          Processing...
+                        </div>
+                      ) : isRegistering ? (
+                        "Register"
+                      ) : (
+                        "Sign in"
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="text-center pt-4">
+                    {isRegistering ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsRegistering(false);
+                          // Remove plan parameter from URL when switching to sign in
+                          if (planParam) {
+                            router.push("/");
+                          }
+                        }}
+                        className="cursor-pointer text-[#F58327] hover:text-[#e67016] transition-colors duration-200"
+                      >
+                        Already have an account? Sign in
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsRegistering(true)}
+                        className="cursor-pointer text-[#F58327] hover:text-[#e67016] transition-colors duration-200"
+                      >
+                        Don't have an account? Register now
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </motion.div>
+            </AnimatePresence>
+          </>
+        )}
       </motion.div>
     </div>
   );
