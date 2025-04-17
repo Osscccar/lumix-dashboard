@@ -154,6 +154,29 @@ export default function SignInPage() {
     }
   };
 
+  const handleCodePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text");
+    if (pastedData.length <= 6) {
+      // Fill in as many characters as we got from the clipboard
+      const newCode = [...verificationCode];
+      for (let i = 0; i < pastedData.length && i < 6; i++) {
+        if (/^\d$/.test(pastedData[i])) {
+          newCode[i] = pastedData[i];
+        }
+      }
+      setVerificationCode(newCode);
+
+      // Focus the next empty input or the last one if all filled
+      const nextEmptyIndex = newCode.findIndex((digit) => digit === "");
+      if (nextEmptyIndex !== -1) {
+        verificationInputRefs.current[nextEmptyIndex]?.focus();
+      } else {
+        verificationInputRefs.current[5]?.focus();
+      }
+    }
+  };
+
   // Function to redirect to Stripe payment
   const redirectToStripePayment = (
     uid: string,
@@ -205,11 +228,29 @@ export default function SignInPage() {
 
       // If we're registering and have temp credentials
       if (isRegistering && tempUserCredential) {
+        console.log("Verification successful, completing registration");
+
+        // Log the credential structure to help debug
+        console.log(
+          "Credential structure:",
+          JSON.stringify({
+            hasUser: !!tempUserCredential?.user,
+            hasUid: !!tempUserCredential?.user?.uid,
+            uid: tempUserCredential?.user?.uid,
+          })
+        );
+
         await completeRegistration(tempUserCredential);
       } else if (!isRegistering) {
         // For sign in, we already have the user authenticated, just proceed
+        console.log("Verification successful for sign in");
         setShowVerification(false);
         setProcessing(false);
+        setIsVerifying(false);
+      } else {
+        // No temp credentials but we're registering - this shouldn't happen
+        console.error("Missing user credentials for registration");
+        setError("Registration data not found. Please try again.");
         setIsVerifying(false);
       }
     } catch (error) {
@@ -226,7 +267,15 @@ export default function SignInPage() {
     try {
       setProcessingMessage("Setting up your profile...");
 
+      // Check if userCredential has the expected structure
+      if (!userCredential || !userCredential.user || !userCredential.user.uid) {
+        console.error("Invalid user credential structure:", userCredential);
+        throw new Error("Invalid user data. Please try again.");
+      }
+
       const newUser = userCredential.user;
+      console.log("Completing registration for user:", newUser.uid);
+
       const db = getFirestore();
       let extractedPlanType: string | null = planType || null;
       let extractedBillingCycle: string | null = billingCycle || null;
@@ -262,7 +311,11 @@ export default function SignInPage() {
         verifiedAt: new Date().toISOString(),
       };
 
+      // Log user data before saving
+      console.log("Saving user data to Firestore:", userDocData);
+
       await setDoc(doc(db, "users", newUser.uid), userDocData);
+      console.log("User data saved successfully");
 
       // Reset states
       setShowVerification(false);
@@ -271,8 +324,10 @@ export default function SignInPage() {
 
       // Redirect based on plan parameter
       if (planParam) {
+        console.log("Redirecting to Stripe with plan:", planParam);
         redirectToStripePayment(newUser.uid, verificationEmail, planParam);
       } else {
+        console.log("Redirecting to pricing page");
         router.push("/pricing");
       }
     } catch (error) {
@@ -510,7 +565,8 @@ export default function SignInPage() {
                         handleVerificationCodeChange(index, e.target.value)
                       }
                       onKeyDown={(e) => handleVerificationKeyDown(index, e)}
-                      className="w-11 h-11 text-center text-xl text-black font-bold border-2 border-gray-300 rounded-md focus:border-[#F58327] focus:outline-none"
+                      onPaste={index === 0 ? handleCodePaste : undefined} // Only add paste handler to first input
+                      className="w-11 h-11 text-center text-xl font-bold border-2 border-gray-300 rounded-md focus:border-[#F58327] focus:outline-none"
                     />
                   ))}
                 </div>
