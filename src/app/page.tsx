@@ -64,7 +64,7 @@ export default function SignInPage() {
     "",
   ]);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [tempUserCredential, setTempUserCredential] = useState<any>(null);
+  const [tempUserId, setTempUserId] = useState<string | null>(null);
   const verificationInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Check for plan parameter in URL
@@ -91,6 +91,30 @@ export default function SignInPage() {
       // Auto-focus next input
       if (value && index < 5) {
         verificationInputRefs.current[index + 1]?.focus();
+      }
+    }
+  };
+
+  // Handle paste for verification code
+  const handleCodePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text");
+    if (pastedData.length <= 6) {
+      // Fill in as many characters as we got from the clipboard
+      const newCode = [...verificationCode];
+      for (let i = 0; i < pastedData.length && i < 6; i++) {
+        if (/^\d$/.test(pastedData[i])) {
+          newCode[i] = pastedData[i];
+        }
+      }
+      setVerificationCode(newCode);
+
+      // Focus the next empty input or the last one if all filled
+      const nextEmptyIndex = newCode.findIndex((digit) => digit === "");
+      if (nextEmptyIndex !== -1) {
+        verificationInputRefs.current[nextEmptyIndex]?.focus();
+      } else {
+        verificationInputRefs.current[5]?.focus();
       }
     }
   };
@@ -154,29 +178,6 @@ export default function SignInPage() {
     }
   };
 
-  const handleCodePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData("text");
-    if (pastedData.length <= 6) {
-      // Fill in as many characters as we got from the clipboard
-      const newCode = [...verificationCode];
-      for (let i = 0; i < pastedData.length && i < 6; i++) {
-        if (/^\d$/.test(pastedData[i])) {
-          newCode[i] = pastedData[i];
-        }
-      }
-      setVerificationCode(newCode);
-
-      // Focus the next empty input or the last one if all filled
-      const nextEmptyIndex = newCode.findIndex((digit) => digit === "");
-      if (nextEmptyIndex !== -1) {
-        verificationInputRefs.current[nextEmptyIndex]?.focus();
-      } else {
-        verificationInputRefs.current[5]?.focus();
-      }
-    }
-  };
-
   // Function to redirect to Stripe payment
   const redirectToStripePayment = (
     uid: string,
@@ -206,75 +207,18 @@ export default function SignInPage() {
     setProcessing(false);
   };
 
-  // Handle verification code submission
-  const handleVerifyCode = async () => {
-    setIsVerifying(true);
-    setError("");
-
-    const code = verificationCode.join("");
-
-    if (code.length !== 6) {
-      setError("Please enter all 6 digits of the verification code");
-      setIsVerifying(false);
-      return;
-    }
-
-    try {
-      const verified = await verifyCode(verificationEmail, code);
-
-      if (!verified) {
-        throw new Error("Invalid verification code");
-      }
-
-      // If we're registering and have temp credentials
-      if (isRegistering && tempUserCredential) {
-        console.log("Verification successful, completing registration");
-
-        // Log the credential structure to help debug
-        console.log(
-          "Credential structure:",
-          JSON.stringify({
-            hasUser: !!tempUserCredential?.user,
-            hasUid: !!tempUserCredential?.user?.uid,
-            uid: tempUserCredential?.user?.uid,
-          })
-        );
-
-        await completeRegistration(tempUserCredential);
-      } else if (!isRegistering) {
-        // For sign in, we already have the user authenticated, just proceed
-        console.log("Verification successful for sign in");
-        setShowVerification(false);
-        setProcessing(false);
-        setIsVerifying(false);
-      } else {
-        // No temp credentials but we're registering - this shouldn't happen
-        console.error("Missing user credentials for registration");
-        setError("Registration data not found. Please try again.");
-        setIsVerifying(false);
-      }
-    } catch (error) {
-      console.error("Verification error:", error);
-      setError(
-        error instanceof Error ? error.message : "Failed to verify code"
-      );
-      setIsVerifying(false);
-    }
-  };
-
   // Complete registration after successful verification
-  const completeRegistration = async (userCredential: any) => {
+  const completeRegistration = async (userId: string) => {
     try {
       setProcessingMessage("Setting up your profile...");
 
-      // Check if userCredential has the expected structure
-      if (!userCredential || !userCredential.user || !userCredential.user.uid) {
-        console.error("Invalid user credential structure:", userCredential);
+      // Check if we have a valid user ID
+      if (!userId) {
+        console.error("Invalid user ID:", userId);
         throw new Error("Invalid user data. Please try again.");
       }
 
-      const newUser = userCredential.user;
-      console.log("Completing registration for user:", newUser.uid);
+      console.log("Completing registration for user:", userId);
 
       const db = getFirestore();
       let extractedPlanType: string | null = planType || null;
@@ -311,23 +255,18 @@ export default function SignInPage() {
         verifiedAt: new Date().toISOString(),
       };
 
-      // Log user data before saving
-      console.log("Saving user data to Firestore:", userDocData);
-
-      await setDoc(doc(db, "users", newUser.uid), userDocData);
-      console.log("User data saved successfully");
+      // Use the userId directly
+      await setDoc(doc(db, "users", userId), userDocData);
 
       // Reset states
       setShowVerification(false);
       setIsVerifying(false);
-      setTempUserCredential(null);
+      setTempUserId(null);
 
       // Redirect based on plan parameter
       if (planParam) {
-        console.log("Redirecting to Stripe with plan:", planParam);
-        redirectToStripePayment(newUser.uid, verificationEmail, planParam);
+        redirectToStripePayment(userId, verificationEmail, planParam);
       } else {
-        console.log("Redirecting to pricing page");
         router.push("/pricing");
       }
     } catch (error) {
@@ -339,6 +278,52 @@ export default function SignInPage() {
       );
       setIsVerifying(false);
       setProcessing(false);
+    }
+  };
+
+  // Handle verification code submission
+  const handleVerifyCode = async () => {
+    setIsVerifying(true);
+    setError("");
+
+    const code = verificationCode.join("");
+
+    if (code.length !== 6) {
+      setError("Please enter all 6 digits of the verification code");
+      setIsVerifying(false);
+      return;
+    }
+
+    try {
+      const verified = await verifyCode(verificationEmail, code);
+
+      if (!verified) {
+        throw new Error("Invalid verification code");
+      }
+
+      // If we're registering and have a user ID
+      if (isRegistering && tempUserId) {
+        console.log("Verification successful, completing registration");
+        console.log("Using user ID:", tempUserId);
+
+        await completeRegistration(tempUserId);
+      } else if (!isRegistering) {
+        // For sign in, we already have the user authenticated, just proceed
+        setShowVerification(false);
+        setProcessing(false);
+        setIsVerifying(false);
+      } else {
+        // No user ID but we're registering - this shouldn't happen
+        console.error("Missing user ID for registration");
+        setError("Registration data not found. Please try again.");
+        setIsVerifying(false);
+      }
+    } catch (error) {
+      console.error("Verification error:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to verify code"
+      );
+      setIsVerifying(false);
     }
   };
 
@@ -401,8 +386,13 @@ export default function SignInPage() {
           phoneNumber,
         });
 
-        // Store temporary credentials
-        setTempUserCredential(newUser);
+        // Store the user ID
+        if (newUser && newUser.uid) {
+          setTempUserId(newUser.uid);
+        } else {
+          console.error("Invalid user structure:", newUser);
+          throw new Error("Failed to create account. Please try again.");
+        }
 
         // Send verification code and show verification UI
         const sent = await sendVerificationCode(email);
@@ -565,8 +555,8 @@ export default function SignInPage() {
                         handleVerificationCodeChange(index, e.target.value)
                       }
                       onKeyDown={(e) => handleVerificationKeyDown(index, e)}
-                      onPaste={index === 0 ? handleCodePaste : undefined} // Only add paste handler to first input
-                      className="w-11 h-11 text-center text-xl font-bold border-2 border-gray-300 rounded-md focus:border-[#F58327] focus:outline-none"
+                      onPaste={index === 0 ? handleCodePaste : undefined}
+                      className="w-11 h-11 text-black text-center text-xl font-bold border-2 border-gray-300 rounded-md focus:border-[#F58327] focus:outline-none"
                     />
                   ))}
                 </div>
