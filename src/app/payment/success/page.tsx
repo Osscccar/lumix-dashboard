@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle, ArrowRight } from "lucide-react";
+import {
+  CheckCircle,
+  ArrowRight,
+  CalendarDays,
+  ClipboardList,
+} from "lucide-react";
 import { updateUserPaymentStatus } from "@/lib/auth-service";
 import { useFirebase } from "@/components/firebase-provider";
 import { motion } from "framer-motion";
@@ -38,7 +43,9 @@ export default function PaymentSuccessPage() {
             setCountdown((prev) => {
               if (prev <= 1) {
                 clearInterval(timer);
-                router.push("/questionnaire");
+                setTimeout(() => {
+                  router.push("/questionnaire-choice");
+                }, 0);
                 return 0;
               }
               return prev - 1;
@@ -141,11 +148,11 @@ export default function PaymentSuccessPage() {
 
           <motion.button
             className="cursor-pointer w-full py-3 px-6 bg-[#F58327] text-black font-bold rounded-lg flex items-center justify-center transition-all hover:bg-[#E47317]"
-            onClick={() => router.push("/questionnaire")}
+            onClick={() => router.push("/questionnaire-choice")}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
           >
-            Continue to Questionnaire
+            Continue
             <ArrowRight className="ml-2 h-5 w-5" />
           </motion.button>
 

@@ -9,6 +9,7 @@ import { getUserData } from "@/lib/auth-service";
 import type { UserData } from "@/types";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { scheduleQuestionnaireReminders } from "@/lib/questionnaire-service";
 
 // Define the project phase types in case they're not already in the types file
 interface ProjectPhase {
@@ -180,36 +181,19 @@ const ProjectPhasesSection = ({
                 phase.status === "pending" ? "opacity-70" : ""
               }`}
             >
-              <div className="flex items-start mb-3">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 flex-shrink-0 ${
-                    phase.status === "completed"
-                      ? "bg-[#D1FAE5]"
-                      : phase.status === "active"
-                      ? "bg-[#FFF8F3]"
-                      : "bg-[#F3F4F6]"
-                  }`}
-                >
-                  {getPhaseIcon(phase.name, phase.status)}
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium text-[#111827]">
-                      {phase.name}
-                    </p>
-
-                    {phase.status === "active" && (
-                      <span className="px-2 py-0.5 text-[10px] bg-[#FFF8F3] text-[#F58327] rounded-full border border-[#FFEAD5]">
-                        Active
-                      </span>
-                    )}
-
-                    {phase.status === "completed" && (
-                      <span className="px-2 py-0.5 text-[10px] bg-[#D1FAE5] text-[#10B981] rounded-full border border-[#A7F3D0]">
-                        Complete
-                      </span>
-                    )}
+              <div className="flex items-start gap-4">
+                {/* Left column: icon + tasks */}
+                <div>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${
+                      phase.status === "completed"
+                        ? "bg-[#D1FAE5]"
+                        : phase.status === "active"
+                        ? "bg-[#FFF8F3]"
+                        : "bg-[#F3F4F6]"
+                    }`}
+                  >
+                    {getPhaseIcon(phase.name, phase.status)}
                   </div>
 
                   <div className="space-y-2">
@@ -235,6 +219,27 @@ const ProjectPhasesSection = ({
                         </span>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Right column: title + status */}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-medium text-[#111827]">
+                      {phase.name}
+                    </p>
+
+                    {phase.status === "active" && (
+                      <span className="px-2 py-0.5 text-[10px] bg-[#FFF8F3] text-[#F58327] rounded-full border border-[#FFEAD5]">
+                        Active
+                      </span>
+                    )}
+
+                    {phase.status === "completed" && (
+                      <span className="px-2 py-0.5 text-[10px] bg-[#D1FAE5] text-[#10B981] rounded-full border border-[#A7F3D0]">
+                        Complete
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -271,6 +276,10 @@ export default function Dashboard() {
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [isSendingFeedback, setIsSendingFeedback] = useState(false);
   const feedbackMessagesRef = useRef<HTMLDivElement>(null);
+  const [notification, setNotification] = useState<{
+    type: string;
+    message: string;
+  } | null>(null);
 
   // Verify user access from Firestore
   useEffect(() => {
@@ -314,16 +323,24 @@ export default function Dashboard() {
         if (!verifiedUserData.hasPaid) {
           console.log("User hasn't paid according to Firestore, redirecting");
           router.push("/");
-        } else if (!verifiedUserData.completedQuestionnaire) {
+        } else if (
+          !verifiedUserData.completedQuestionnaire &&
+          !verifiedUserData.questionnairePostponed
+        ) {
+          // Only redirect if they haven't completed the questionnaire AND haven't chosen to postpone it
           console.log(
-            "User hasn't completed questionnaire according to Firestore"
+            "User hasn't completed questionnaire and hasn't postponed it"
           );
           router.push("/questionnaire");
         }
       } else if (userData) {
         if (!userData.hasPaid) {
           router.push("/");
-        } else if (!userData.completedQuestionnaire) {
+        } else if (
+          !userData.completedQuestionnaire &&
+          !userData.questionnairePostponed
+        ) {
+          // Only redirect if they haven't completed the questionnaire AND haven't chosen to postpone it
           router.push("/questionnaire");
         }
       }
@@ -442,6 +459,21 @@ export default function Dashboard() {
     }
   }, [displayData?.feedbackMessages]);
 
+  useEffect(() => {
+    // Check for reminder status in URL
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get("reminder") === "scheduled") {
+      // Show notification that reminders are scheduled
+      setNotification({
+        type: "success",
+        message: "Reminder emails have been scheduled. Check your inbox soon!",
+      });
+
+      // Clear the URL parameter
+      window.history.replaceState({}, "", "/dashboard");
+    }
+  }, []);
+
   if (loading || isVerifyingAccess) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FAFBFF]">
@@ -509,6 +541,27 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#FAFBFF] font-satoshi">
+      {notification && (
+        <div className="fixed top-0 left-0 right-0 z-50">
+          <div
+            className={`px-4 py-3 ${
+              notification.type === "success"
+                ? "bg-green-50 border-l-4 border-green-500 text-green-700"
+                : "bg-red-50 border-l-4 border-red-500 text-red-700"
+            }`}
+          >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+              <p className="text-sm font-medium">{notification.message}</p>
+              <button
+                onClick={() => setNotification(null)}
+                className="text-gray-500 hover:text-gray-700 ml-4"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Mobile menu button */}
       <div className="fixed top-4 left-4 z-50 md:hidden">
         <button

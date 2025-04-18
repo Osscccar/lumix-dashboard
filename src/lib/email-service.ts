@@ -51,3 +51,68 @@ export async function sendVerificationEmail(
     return { success: false, error };
   }
 }
+
+// Send questionnaire reminder email
+export async function sendQuestionnaireReminderEmail(
+  email: string,
+  reminderNumber: number
+): Promise<{ success: boolean; error?: any; response?: any }> {
+  try {
+    const isFirstReminder = reminderNumber === 1;
+
+    const subject = isFirstReminder
+      ? "Complete your Lumix Digital questionnaire"
+      : "Reminder: Your website questionnaire is waiting";
+
+    const data = {
+      from: process.env.MAILGUN_FROM_EMAIL || "noreply@lumixdigital.com.au",
+      to: email,
+      subject: subject,
+      text: `It's time to complete your website questionnaire. Visit https://app.lumixdigital.com.au/questionnaire to get started.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="https://lumixdigital.com.au/images/logo.png" alt="Lumix Digital" style="max-width: 150px;" />
+          </div>
+          <h2 style="color: #F58327; text-align: center;">
+            ${
+              isFirstReminder
+                ? "Time to Complete Your Website Questionnaire"
+                : "Don't Forget Your Website Questionnaire"
+            }
+          </h2>
+          <p>${
+            isFirstReminder
+              ? "Thanks for choosing Lumix Digital! To get started on your website build, we need some information from you."
+              : "We noticed you haven't completed your website questionnaire yet. Your input is essential for us to create your perfect website."
+          }</p>
+          
+          <p>The questionnaire will help us understand your business needs and design preferences.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://app.lumixdigital.com.au/questionnaire" 
+               style="background-color: #F58327; color: white; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
+              Complete Questionnaire Now
+            </a>
+          </div>
+          
+          <p>If you have any questions or need assistance, feel free to contact our support team.</p>
+          
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; text-align: center;">
+            <p>© ${new Date().getFullYear()} Lumix Digital. All rights reserved.</p>
+          </div>
+        </div>
+      `,
+    };
+
+    const result = await mg.messages.create(
+      process.env.MAILGUN_DOMAIN || "",
+      data
+    );
+
+    return { success: true, response: result };
+  } catch (error) {
+    console.error("Error sending questionnaire reminder email:", error);
+    return { success: false, error };
+  }
+}

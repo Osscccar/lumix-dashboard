@@ -33,6 +33,11 @@ export interface UserData {
   feedbackMessages?: FeedbackMessage[];
   editorUrl?: string;
   revisionsUrl?: string;
+  // Reminder questionnaire stuff
+  questionnairePostponed?: boolean;
+  questionnaireReminderStatus?: string;
+  firstReminderTime?: string;
+  secondReminderTime?: string;
 }
 
 export interface FeedbackMessage {
