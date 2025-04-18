@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { useFirebase } from "@/components/firebase-provider";
 import { motion } from "framer-motion";
 import { Loader2, Calendar, FileText } from "lucide-react";
-import { scheduleQuestionnaireReminders } from "@/lib/questionnaire-service";
+import { sendImmediateQuestionnaireMail } from "@/lib/questionnaire-service";
 import Image from "next/image";
+import mainLogo from "@/app/public/images/mainLogo.png";
 
 export default function QuestionnaireChoicePage() {
   const router = useRouter();
@@ -31,10 +32,10 @@ export default function QuestionnaireChoicePage() {
     router.push("/questionnaire");
   };
 
-  // Handle "Remind me later" option
+  // Handle "Remind me later" option - now sends email immediately
   const handleRemindMeLater = async () => {
     if (!user || !user.email) {
-      setError("Unable to schedule reminders. Please try again.");
+      setError("Unable to send reminder email. Please try again.");
       return;
     }
 
@@ -42,20 +43,21 @@ export default function QuestionnaireChoicePage() {
     setError("");
 
     try {
-      console.log("Scheduling reminders for user:", user.uid);
-      const success = await scheduleQuestionnaireReminders(
+      console.log("Sending reminder email to user:", user.uid);
+
+      const success = await sendImmediateQuestionnaireMail(
         user.uid,
         user.email
       );
 
       if (success) {
         // Redirect to dashboard with a success message
-        router.push("/dashboard?reminder=scheduled");
+        router.push("/dashboard?reminder=sent");
       } else {
-        throw new Error("Failed to schedule reminder emails");
+        throw new Error("Failed to send reminder email");
       }
     } catch (error) {
-      console.error("Error scheduling reminders:", error);
+      console.error("Error sending reminder email:", error);
       setError(
         error instanceof Error ? error.message : "An unexpected error occurred"
       );
@@ -102,7 +104,7 @@ export default function QuestionnaireChoicePage() {
       <div className="w-full max-w-3xl">
         <div className="flex justify-center mb-8">
           <Image
-            src="/images/logo.png"
+            src={mainLogo}
             alt="Lumix Logo"
             width={120}
             height={48}
@@ -149,7 +151,7 @@ export default function QuestionnaireChoicePage() {
             </button>
           </motion.div>
 
-          {/* Option 2: Remind me later */}
+          {/* Option 2: Remind me later - now sends immediate email */}
           <motion.div
             whileHover={{ scale: 1.03 }}
             className="bg-black border border-gray-800 rounded-xl p-8 flex flex-col items-center text-center cursor-pointer"
@@ -162,8 +164,8 @@ export default function QuestionnaireChoicePage() {
               Remind Me Later
             </h3>
             <p className="text-gray-400 mb-6">
-              We'll send you reminder emails (first in 2 minutes, then in 10
-              minutes) with a link to complete the questionnaire.
+              We'll send you an email with a link to complete the questionnaire
+              when you're ready.
             </p>
             <button
               className="cursor-pointer mt-auto bg-transparent border border-[#F58327] text-[#F58327] rounded-full px-6 py-3 font-medium hover:bg-[#F58327]/10 transition-colors"
@@ -172,10 +174,10 @@ export default function QuestionnaireChoicePage() {
               {isProcessing ? (
                 <div className="flex items-center">
                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Scheduling...
+                  Sending Email...
                 </div>
               ) : (
-                "Send Me Reminders"
+                "Email Me a Link"
               )}
             </button>
           </motion.div>
