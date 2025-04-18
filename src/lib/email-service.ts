@@ -34,7 +34,7 @@ export async function sendVerificationEmail(
             <!-- Header -->
             <tr>
               <td style="background-color: #000000; text-align: center; padding: 20px 0;">
-                <img src="https://app.lumixdigital.com.au/public/image.png" alt="Lumix Digital" style="max-width: 180px; height: auto;">
+                <img src="https://app.lumixdigital.com.au/image.png" alt="Lumix Digital" style="max-width: 180px; height: auto;">
               </td>
             </tr>
             
@@ -116,7 +116,7 @@ export async function sendQuestionnaireReminderEmail(
             <!-- Header -->
             <tr>
               <td style="background-color: #000000; text-align: center; padding: 20px 0;">
-                <img src="https://app.lumixdigital.com.au/public/image.png" alt="Lumix Digital" style="max-width: 180px; height: auto;">
+                <img src="https://app.lumixdigital.com.au/image.png" alt="Lumix Digital" style="max-width: 180px; height: auto;">
               </td>
             </tr>
             
