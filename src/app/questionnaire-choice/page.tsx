@@ -52,7 +52,7 @@ export default function QuestionnaireChoicePage() {
 
       if (success) {
         // Redirect to dashboard with a success message
-        router.push("/dashboard?reminder=sent");
+        router.push("/questionnaire");
       } else {
         throw new Error("Failed to send reminder email");
       }
