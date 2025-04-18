@@ -12,6 +12,8 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase"; // Import from centralized file
@@ -23,6 +25,7 @@ type FirebaseContextType = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (email: string, password: string, userData: any) => Promise<User>;
+  signInWithGoogle: () => Promise<User>;
   logout: () => Promise<void>;
   isVerified?: boolean;
   verificationEmail?: string;
@@ -70,6 +73,45 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string): Promise<User> => {
     const result = await signInWithEmailAndPassword(auth, email, password);
     return result.user;
+  };
+
+  // Sign in with Google function
+  const signInWithGoogle = async (): Promise<User> => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Check if user document exists
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+
+      // If not, create a new document with basic info from Google
+      if (!userDoc.exists()) {
+        const names = user.displayName ? user.displayName.split(" ") : ["", ""];
+        const firstName = names[0] || "";
+        const lastName = names.slice(1).join(" ") || "";
+
+        const userDocData = {
+          email: user.email || "",
+          firstName,
+          lastName,
+          phoneNumber: user.phoneNumber || "",
+          hasPaid: false,
+          subscriptionStatus: "pending",
+          completedQuestionnaire: false,
+          createdAt: new Date().toISOString(),
+          emailVerified: true, // Google accounts are already verified
+          verifiedAt: new Date().toISOString(),
+        };
+
+        await setDoc(doc(db, "users", user.uid), userDocData);
+      }
+
+      return user;
+    } catch (error) {
+      console.error("Error during Google sign-in:", error);
+      throw error;
+    }
   };
 
   // Sign up function with improved error handling
@@ -205,6 +247,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
         loading,
         signIn,
         signUp,
+        signInWithGoogle,
         logout,
       }}
     >

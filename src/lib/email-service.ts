@@ -19,7 +19,7 @@ export async function sendVerificationEmail(
     const data = {
       from: process.env.MAILGUN_FROM_EMAIL || "noreply@lumixdigital.com.au",
       to: email,
-      subject: "Verify your Lumix Digital account",
+      subject: "Verify your Lumix Digital Account",
       text: `Your verification code is: ${verificationCode}`,
       html: `
         <!DOCTYPE html>
@@ -95,7 +95,7 @@ export async function sendQuestionnaireReminderEmail(
     const isFirstReminder = reminderNumber === 1;
 
     const subject = isFirstReminder
-      ? "Complete your Lumix Digital questionnaire"
+      ? "Complete your Lumix Digital Questionnaire"
       : "Reminder: Your website questionnaire is waiting";
 
     const data = {

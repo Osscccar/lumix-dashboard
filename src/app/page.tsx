@@ -7,12 +7,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useFirebase } from "@/components/firebase-provider";
 import { doc, setDoc, getFirestore } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, Mail } from "lucide-react";
 import Image, { StaticImageData } from "next/image";
 import lumixlogo from "@/app/public/images/image.png";
 import launchLogo from "@/app/public/images/launch.png";
 import businessLogo from "@/app/public/images/business.png";
 import enterpriseLogo from "@/app/public/images/enterprise.png";
+import googleLogo from "@/app/public/images/google.svg";
 
 // Define your Stripe payment link
 const STRIPE_PAYMENT_LINK =
@@ -41,7 +42,8 @@ const planIcons: Record<string, StaticImageData> = {
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, userData, loading, signIn, signUp } = useFirebase();
+  const { user, userData, loading, signIn, signUp, signInWithGoogle } =
+    useFirebase();
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -51,6 +53,7 @@ export default function SignInPage() {
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("Processing...");
+  const [googleProcessing, setGoogleProcessing] = useState(false);
 
   // 2FA states
   const [showVerification, setShowVerification] = useState(false);
@@ -197,6 +200,37 @@ export default function SignInPage() {
       paymentUrl.searchParams.append("uid", uid);
       paymentUrl.searchParams.append("email", email);
       window.location.href = paymentUrl.toString();
+    }
+  };
+
+  // Handle Google Sign In
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setGoogleProcessing(true);
+
+    try {
+      const user = await signInWithGoogle();
+
+      // Since Google accounts are pre-verified, we can redirect immediately
+      if (planParam) {
+        redirectToStripePayment(user.uid, user.email || "", planParam);
+      } else if (userData?.hasPaid) {
+        if (!userData.completedQuestionnaire) {
+          router.push("/questionnaire");
+        } else {
+          router.push("/dashboard");
+        }
+      } else {
+        router.push("/pricing");
+      }
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to sign in with Google. Please try again."
+      );
+      setGoogleProcessing(false);
     }
   };
 
@@ -460,7 +494,7 @@ export default function SignInPage() {
     }
   }, [showVerification]);
 
-  if (loading || (processing && !showVerification)) {
+  if (loading || (processing && !showVerification) || googleProcessing) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
         <motion.div
@@ -483,7 +517,9 @@ export default function SignInPage() {
               ></motion.div>
             </div>
           </div>
-          <p className="text-white text-lg">{processingMessage}</p>
+          <p className="text-white text-lg">
+            {googleProcessing ? "Signing in with Google..." : processingMessage}
+          </p>
         </motion.div>
       </div>
     );
@@ -657,6 +693,34 @@ export default function SignInPage() {
                 variants={fadeIn}
                 transition={{ duration: 0.3 }}
               >
+                {/* Google Sign In Button */}
+                <div className="mb-5">
+                  <button
+                    onClick={handleGoogleSignIn}
+                    className="w-full cursor-pointer flex items-center justify-center bg-white text-gray-800 border border-gray-300 rounded-full px-4 py-3 font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    <Image
+                      src="/images/google.svg"
+                      alt="Google logo"
+                      width={20}
+                      height={20}
+                      className="mr-3"
+                    />
+                    {isRegistering
+                      ? "Sign up with Google"
+                      : "Sign in with Google"}
+                  </button>
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center mb-5">
+                  <div className="flex-1 h-px bg-gray-800"></div>
+                  <span className="px-3 text-sm text-gray-400">
+                    or continue with email
+                  </span>
+                  <div className="flex-1 h-px bg-gray-800"></div>
+                </div>
+
                 <form className="space-y-6" onSubmit={handleSubmit}>
                   <div className="space-y-4">
                     <div>
@@ -780,9 +844,9 @@ export default function SignInPage() {
                           Processing...
                         </div>
                       ) : isRegistering ? (
-                        "Register"
+                        "Register with Email"
                       ) : (
-                        "Sign in"
+                        "Sign in with Email"
                       )}
                     </button>
                   </div>

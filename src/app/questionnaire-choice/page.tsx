@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { Loader2, Calendar, FileText } from "lucide-react";
 import { sendImmediateQuestionnaireMail } from "@/lib/questionnaire-service";
 import Image from "next/image";
-import mainLogo from "@/app/public/images/mainLogo.png";
+import mainLogo from "@/app/public/images/image.png";
 
 export default function QuestionnaireChoicePage() {
   const router = useRouter();
