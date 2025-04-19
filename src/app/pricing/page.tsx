@@ -7,6 +7,14 @@ import { motion } from "framer-motion";
 import { Check, X, Loader2 } from "lucide-react";
 import { doc, updateDoc, getFirestore } from "firebase/firestore";
 
+// Define feature type to fix TypeScript errors
+type FeatureItem = {
+  text: string;
+  subtext?: string;
+};
+
+type Feature = string | FeatureItem;
+
 // Map of plan types to their stripe payment links
 const STRIPE_PAYMENT_LINKS: Record<string, string> = {
   "launch-yearly": "https://buy.stripe.com/fZecQy9Oz51ScOQdR2",
@@ -18,7 +26,7 @@ const STRIPE_PAYMENT_LINKS: Record<string, string> = {
 };
 
 // Features that appear in "Included in all plans"
-const baseFeatures = [
+const baseFeatures: Feature[] = [
   "Built-for-you website / online store",
   "Personalized design & copy",
   "Ready in just 5 days",
@@ -34,9 +42,9 @@ const baseFeatures = [
 ];
 
 // Additional features specific to each plan
-const launchFeatures: string[] = [];
+const launchFeatures: Feature[] = [];
 
-const businessFeatures = [
+const businessFeatures: Feature[] = [
   "Advanced SEO to rank high on Google",
   { text: "FREE custom domain", subtext: "(Eg. www.yourwebsite.com)" },
   {
@@ -47,7 +55,7 @@ const businessFeatures = [
   "VIP support and extra fast updates",
 ];
 
-const enterpriseFeatures = [
+const enterpriseFeatures: Feature[] = [
   "Advanced e-commerce capabilities",
   "Full webstore built for you",
   "Unlimited products",
