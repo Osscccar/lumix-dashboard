@@ -616,7 +616,15 @@ export function getQuestionComponent(
     case "fileUpload":
       return <FileUploadInput {...props} />;
     case "domainSearch":
-      return <DomainSearchInput {...props} />;
+      // Correctly map the props needed by DomainSearchInput
+      return (
+        <DomainSearchInput
+          questionId={props.questionId}
+          placeholder={props.placeholder}
+          value={(props.answers[props.questionId] as string) || ""}
+          onChange={(value: string) => props.handleAnswerChange(value)}
+        />
+      );
     default:
       return (
         <div className="text-red-400">Unsupported question type: {type}</div>
