@@ -61,12 +61,24 @@ export default function QuestionnairePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeUploadTask, setActiveUploadTask] = useState<any>(null);
+  const userPlanType = userData?.planType?.toLowerCase() || "";
 
   // Filter questions based on conditional logic
   useEffect(() => {
-    // Filter questions based on conditions
+    // Filter questions based on conditions and plan type
     const filteredQuestions = questionsData.filter((question) => {
-      // If question has no condition, always include it
+      // First check plan-specific condition if it exists
+      if (question.planCondition) {
+        if (question.planCondition.type === "plan") {
+          // If this question has plan restrictions, check if user's plan is allowed
+          const allowedPlans = question.planCondition.plans;
+          if (!allowedPlans.includes(userPlanType)) {
+            return false; // User's plan doesn't have access to this question
+          }
+        }
+      }
+
+      // If question has no condition, always include it (subject to plan restrictions above)
       if (!question.condition) return true;
 
       // Get the answer to the condition question
@@ -87,7 +99,7 @@ export default function QuestionnairePage() {
     });
 
     setQuestions(filteredQuestions);
-  }, [answers]);
+  }, [answers, userPlanType]);
 
   // Cleanup active uploads when component unmounts
   useEffect(() => {

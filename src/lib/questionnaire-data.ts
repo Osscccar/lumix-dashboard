@@ -6,7 +6,13 @@ export type QuestionType =
   | "multiselect"
   | "color"
   | "websiteList"
-  | "fileUpload"; // Added file upload type
+  | "fileUpload"
+  | "domainSearch"; // Added domain search type
+
+export interface PlanCondition {
+  type: "plan";
+  plans: string[]; // Array of plan types where this question should appear
+}
 
 // Define the question interface
 export interface Question {
@@ -22,12 +28,25 @@ export interface Question {
     questionId: string;
     expectedAnswer: string | string[];
   };
-  fileType?: "image" | "multiple-images"; // Added for file upload questions
-  acceptedFileTypes?: string; // e.g., "image/png,image/jpeg"
+  planCondition?: PlanCondition; // New property for plan-specific conditions
+  fileType?: "image" | "multiple-images";
+  acceptedFileTypes?: string;
 }
 
 // Define the questions for the questionnaire
 export const questionsData: Question[] = [
+  {
+    id: "customDomainName",
+    type: "domainSearch", // New question type for domain search
+    question:
+      "What custom domain would you like for your website? (Free with your plan)",
+    placeholder: "Search for a domain (e.g., yourbusiness.com)",
+    required: false,
+    planCondition: {
+      type: "plan",
+      plans: ["business", "enterprise"], // Only show for business and enterprise plans
+    },
+  },
   {
     id: "businessName",
     type: "text",

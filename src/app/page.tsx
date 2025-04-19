@@ -5,7 +5,7 @@ import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFirebase } from "@/components/firebase-provider";
-import { doc, setDoc, getFirestore } from "firebase/firestore";
+import { doc, setDoc, getFirestore, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, ShieldCheck, Mail } from "lucide-react";
 import Image, { StaticImageData } from "next/image";
@@ -211,12 +211,18 @@ export default function SignInPage() {
     try {
       const user = await signInWithGoogle();
 
-      // Since Google accounts are pre-verified, we can redirect immediately
+      // We need to get the latest user data from Firestore
+      const db = getFirestore();
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+      const latestUserData = userDoc.exists() ? userDoc.data() : null;
+
+      // Now use the latest user data for redirection
       if (planParam) {
         redirectToStripePayment(user.uid, user.email || "", planParam);
-      } else if (userData?.hasPaid) {
-        if (!userData.completedQuestionnaire) {
-          router.push("/questionnaire");
+      } else if (latestUserData?.hasPaid) {
+        if (!latestUserData.completedQuestionnaire) {
+          router.push("/questionnaire-choice"); // Changed this to questionnaire-choice
         } else {
           router.push("/dashboard");
         }

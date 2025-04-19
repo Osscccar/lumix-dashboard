@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { type QuestionnaireAnswers } from "@/types";
 import { FileUpload } from "@/types";
+import { DomainSearchInput } from "./DomainSearchInput";
 
 type QuestionComponentProps = {
   questionId: string;
@@ -614,6 +615,8 @@ export function getQuestionComponent(
       return <WebsiteListInput {...props} />;
     case "fileUpload":
       return <FileUploadInput {...props} />;
+    case "domainSearch":
+      return <DomainSearchInput {...props} />;
     default:
       return (
         <div className="text-red-400">Unsupported question type: {type}</div>
