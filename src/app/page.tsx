@@ -832,6 +832,22 @@ export default function SignInPage() {
                     )}
                   </div>
 
+                  {/* TOS Disclaimer */}
+                  <div className="pt-2">
+                    <p className="text-gray-400 text-xs text-center">
+                      By {isRegistering ? "registering" : "signing in"}, you
+                      agree to Lumix Digital's{" "}
+                      <a
+                        href="https://lumixdigital.com.au/tos"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#F58327] hover:text-[#e67016] transition-colors underline"
+                      >
+                        Terms of Service
+                      </a>
+                    </p>
+                  </div>
+
                   <div className="pt-4">
                     <button
                       type="submit"

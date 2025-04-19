@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   saveQuestionnaireAnswers,
@@ -7,235 +7,43 @@ import {
   getUserData,
 } from "@/lib/auth-service";
 import type { QuestionnaireAnswers } from "@/types";
+import type { FileUpload } from "@/types";
 import { useFirebase } from "@/components/firebase-provider";
 import { motion, AnimatePresence } from "framer-motion";
+import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { getQuestionComponent } from "@/components/questionnaire/QuestionComponents";
+import { questionsData } from "@/lib/questionnaire-data";
 import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Plus,
-  X,
-  Globe,
-  Trash2,
-} from "lucide-react";
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
-// Define the question types
-type QuestionType =
-  | "text"
-  | "textarea"
-  | "radio"
-  | "multiselect"
-  | "color"
-  | "websiteList";
+// Import validation functions
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-// Define the question interface
-interface Question {
-  id: string;
-  type: QuestionType;
-  question: string;
-  placeholder?: string;
-  options?: string[];
-  required?: boolean;
-  validationMessage?: string;
-  validateFn?: (value: any) => boolean;
-  condition?: {
-    questionId: string;
-    expectedAnswer: string | string[];
-  };
-}
+const validateFileSize = (file: File): boolean => {
+  return file.size <= MAX_FILE_SIZE;
+};
 
-// Define the questions for the questionnaire
-const allQuestions: Question[] = [
-  {
-    id: "businessName",
-    type: "text",
-    question: "What is the name of your business?",
-    placeholder: "E.g., Acme Corporation",
-    required: true,
-    validationMessage: "Business name is required",
-  },
-  {
-    id: "businessDescription",
-    type: "textarea",
-    question: "Briefly describe what your business does.",
-    placeholder: "Describe your products, services, and mission...",
-    required: true,
-    validationMessage: "Business description is required",
-  },
-  {
-    id: "servicesProducts",
-    type: "textarea",
-    question: "What services or products do you offer?",
-    placeholder: "List your main services or products...",
-    required: true,
-    validationMessage: "Services or products information is required",
-  },
-  {
-    id: "competitors",
-    type: "websiteList",
-    question:
-      "Who are your main competitors (please list websites if possible)?",
-    placeholder: "E.g., Competitor Name - www.competitor.com",
-    required: false,
-  },
-  {
-    id: "targetAudience",
-    type: "textarea",
-    question: "Who is your target audience?",
-    placeholder: "E.g., age, gender, industry, location, pain points...",
-    required: true,
-    validationMessage: "Target audience information is required",
-  },
-  {
-    id: "hasCurrentWebsite",
-    type: "radio",
-    question: "Do you currently have a website?",
-    options: ["Yes", "No"],
-    required: true,
-    validationMessage: "Please indicate if you have a current website",
-  },
-  {
-    id: "currentWebsiteUrl",
-    type: "text",
-    question: "What is the URL of your current website?",
-    placeholder: "E.g., www.yourbusiness.com",
-    required: false,
-    condition: {
-      questionId: "hasCurrentWebsite",
-      expectedAnswer: "Yes",
-    },
-  },
-  {
-    id: "websiteLikes",
-    type: "textarea",
-    question: "What do you like about your current website?",
-    placeholder:
-      "List features, design elements, or functionality you'd like to keep...",
-    required: false,
-    condition: {
-      questionId: "hasCurrentWebsite",
-      expectedAnswer: "Yes",
-    },
-  },
-  {
-    id: "websiteDislikes",
-    type: "textarea",
-    question:
-      "What do you dislike or want to change about your current website?",
-    placeholder: "List issues, outdated elements, or missing features...",
-    required: false,
-    condition: {
-      questionId: "hasCurrentWebsite",
-      expectedAnswer: "Yes",
-    },
-  },
-  {
-    id: "currentCms",
-    type: "text",
-    question: "What CMS or platform is your current website built on?",
-    placeholder: "E.g., WordPress, Shopify, Wix, etc.",
-    required: false,
-    condition: {
-      questionId: "hasCurrentWebsite",
-      expectedAnswer: "Yes",
-    },
-  },
-  {
-    id: "desiredVisitorActions",
-    type: "multiselect",
-    question:
-      "What specific actions do you want visitors to take on your site?",
-    options: [
-      "Book a call/consultation",
-      "Fill out a contact form",
-      "Buy a product/service",
-      "Subscribe to newsletter",
-      "Download resources",
-      "Request a quote",
-      "Follow on social media",
-    ],
-    required: true,
-    validationMessage: "Please select at least one desired visitor action",
-  },
-  {
-    id: "websitePages",
-    type: "multiselect",
-    question: "What pages do you want on your website?",
-    options: [
-      "Home",
-      "About",
-      "Services",
-      "Products",
-      "Contact",
-      "Blog",
-      "FAQ",
-      "Testimonials",
-      "Portfolio",
-      "Pricing",
-      "Team",
-    ],
-    required: true,
-    validationMessage: "Please select at least one page for your website",
-  },
-  {
-    id: "colorPreferences",
-    type: "color",
-    question: "Do you have a specific color palette you'd like us to use?",
-    placeholder:
-      "Please add hex codes for your preferred colors (e.g., #FF5733)",
-    required: false,
-  },
-  {
-    id: "websiteStyle",
-    type: "multiselect",
-    question: "What style or tone do you want the website to have?",
-    options: [
-      "Modern",
-      "Corporate",
-      "Playful",
-      "Minimalist",
-      "Luxurious",
-      "Bold",
-      "Conservative",
-      "Creative",
-      "Technical",
-    ],
-    required: true,
-    validationMessage: "Please select at least one style for your website",
-  },
-  // File upload questions removed
-  {
-    id: "videoContent",
-    type: "text",
-    question: "Do you have video content you want embedded on the site?",
-    placeholder: "Please describe or provide links to videos",
-    required: false,
-  },
-  {
-    id: "contentReady",
-    type: "radio",
-    question:
-      "Would you like us to provide free copywriting, or will you use your own?",
-    options: ["We will write all your copy", "Add your own copy later"],
-    required: true,
-    validationMessage: "Please answer the question",
-  },
-  {
-    id: "domainName",
-    type: "text",
-    question: "Do you already have a domain name? If so, what is it?",
-    placeholder: "E.g., yourbusiness.com",
-    required: false,
-  },
-  {
-    id: "domainProvider",
-    type: "text",
-    question: "Who is your current domain provider?",
-    placeholder: "E.g., GoDaddy, Namecheap, Google Domains...",
-    required: false,
-  },
-];
+const validateFileType = (file: File, acceptedTypes: string): boolean => {
+  if (!acceptedTypes) return true;
+
+  const acceptedTypesArray = acceptedTypes.split(",");
+  return acceptedTypesArray.some((type) => {
+    // Handle wildcard types like image/*
+    if (type.endsWith("/*")) {
+      const category = type.split("/")[0];
+      return file.type.startsWith(`${category}/`);
+    }
+    return file.type === type;
+  });
+};
+
+// Import Question type from our data file
+import type { Question } from "@/lib/questionnaire-data";
 
 export default function QuestionnairePage() {
   const router = useRouter();
@@ -250,11 +58,14 @@ export default function QuestionnairePage() {
   const [customPageOption, setCustomPageOption] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [activeUploadTask, setActiveUploadTask] = useState<any>(null);
 
   // Filter questions based on conditional logic
   useEffect(() => {
     // Filter questions based on conditions
-    const filteredQuestions = allQuestions.filter((question) => {
+    const filteredQuestions = questionsData.filter((question) => {
       // If question has no condition, always include it
       if (!question.condition) return true;
 
@@ -278,6 +89,21 @@ export default function QuestionnairePage() {
     setQuestions(filteredQuestions);
   }, [answers]);
 
+  // Cleanup active uploads when component unmounts
+  useEffect(() => {
+    return () => {
+      // Cancel any ongoing uploads when component unmounts
+      if (activeUploadTask) {
+        try {
+          activeUploadTask.cancel();
+          console.log("Upload task canceled due to component unmount");
+        } catch (error) {
+          console.error("Error canceling upload task:", error);
+        }
+      }
+    };
+  }, [activeUploadTask]);
+
   // First, verify payment status directly from Firestore
   useEffect(() => {
     async function verifyPaymentStatus() {
@@ -299,7 +125,7 @@ export default function QuestionnairePage() {
 
               // Find the last answered question to resume from there
               let lastAnsweredIndex = 0;
-              const questionIds = allQuestions.map((q) => q.id);
+              const questionIds = questionsData.map((q) => q.id);
 
               for (let i = questionIds.length - 1; i >= 0; i--) {
                 if (
@@ -314,7 +140,7 @@ export default function QuestionnairePage() {
 
               // Set the current question to the next unanswered one
               setCurrentQuestionIndex(
-                Math.min(lastAnsweredIndex + 1, allQuestions.length - 1)
+                Math.min(lastAnsweredIndex + 1, questionsData.length - 1)
               );
             }
           } else {
@@ -355,6 +181,7 @@ export default function QuestionnairePage() {
       }
     }
   }, [loading, user, userData, router, isVerifyingPayment, hasPaid]);
+
   // Auto-save function
   const autoSave = async () => {
     if (!user || Object.keys(answers).length === 0) return;
@@ -383,7 +210,7 @@ export default function QuestionnairePage() {
   }, [answers]);
 
   // Current question data
-  const currentQuestion = questions[currentQuestionIndex] || allQuestions[0];
+  const currentQuestion = questions[currentQuestionIndex] || questionsData[0];
 
   // Handle single answer updates
   const handleAnswerChange = (value: string) => {
@@ -529,7 +356,270 @@ export default function QuestionnairePage() {
     });
   };
 
-  // File upload handlers removed
+  // File upload handlers
+  const handleFileUpload = async (file: File) => {
+    if (!user) return;
+
+    try {
+      setIsUploading(true);
+      setError("");
+      setUploadProgress(0);
+
+      // Validate file size
+      if (!validateFileSize(file)) {
+        setError(
+          "File size exceeds the 5MB limit. Please upload a smaller file."
+        );
+        setIsUploading(false);
+        return;
+      }
+
+      // Validate file type
+      if (
+        currentQuestion.acceptedFileTypes &&
+        !validateFileType(file, currentQuestion.acceptedFileTypes)
+      ) {
+        setError(
+          `Invalid file type. Accepted types: ${currentQuestion.acceptedFileTypes
+            .replace(/image\//g, "")
+            .replace(/,/g, ", ")}`
+        );
+        setIsUploading(false);
+        return;
+      }
+
+      // Generate a unique file path in Firebase Storage
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${currentQuestion.id}_${Date.now()}.${fileExt}`;
+      const filePath = `users/${user.uid}/${fileName}`;
+
+      // Create a reference to the storage location
+      const storageRef = ref(storage, filePath);
+
+      // Create the upload task with progress monitoring
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      // Track this as the active upload task
+      setActiveUploadTask(uploadTask);
+
+      // Set up progress monitoring
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          // Track upload progress
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+          console.log(`Upload progress: ${progress.toFixed(2)}%`);
+        },
+        (error) => {
+          // Handle errors
+          console.error("Upload error:", error);
+          setError("Upload failed. Please try again.");
+          setIsUploading(false);
+          setActiveUploadTask(null);
+        },
+        async () => {
+          // Upload completed successfully
+          try {
+            // Get the download URL
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+            // Create the file upload object to save in the questionnaire answers
+            const fileUpload: FileUpload = {
+              name: file.name,
+              url: downloadURL,
+              type: file.type,
+              size: file.size,
+            };
+
+            // Update answers state
+            setAnswers({
+              ...answers,
+              [currentQuestion.id]: fileUpload,
+            });
+
+            console.log(`File uploaded successfully: ${fileName}`);
+          } catch (error) {
+            console.error("Error getting download URL:", error);
+            setError("Upload completed but couldn't retrieve file URL.");
+          } finally {
+            setIsUploading(false);
+            setActiveUploadTask(null);
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Error starting upload:", error);
+      setError("Failed to upload file. Please try again.");
+      setIsUploading(false);
+      setActiveUploadTask(null);
+    }
+  };
+
+  const handleMultipleFileUpload = async (files: FileList) => {
+    if (!user) return;
+
+    try {
+      setIsUploading(true);
+      setError("");
+      setUploadProgress(0);
+
+      // Get existing files (if any)
+      const existingFiles = (answers[currentQuestion.id] as FileUpload[]) || [];
+      const newFiles: FileUpload[] = [];
+      let totalFiles = files.length;
+      let completedFiles = 0;
+
+      // Process each file in the list
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        // Validate file size
+        if (!validateFileSize(file)) {
+          setError(`File ${file.name} exceeds the 5MB limit and was skipped.`);
+          totalFiles--;
+          continue;
+        }
+
+        // Validate file type
+        if (
+          currentQuestion.acceptedFileTypes &&
+          !validateFileType(file, currentQuestion.acceptedFileTypes)
+        ) {
+          setError(`File ${file.name} has an invalid type and was skipped.`);
+          totalFiles--;
+          continue;
+        }
+
+        // Generate a unique file path in Firebase Storage
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${currentQuestion.id}_${Date.now()}_${i}.${fileExt}`;
+        const filePath = `users/${user.uid}/${fileName}`;
+
+        // Create a reference to the storage location
+        const storageRef = ref(storage, filePath);
+
+        // Create the upload task
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        setActiveUploadTask(uploadTask);
+
+        // Set up progress monitoring and handle completion
+        await new Promise<void>((resolve, reject) => {
+          uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+              // Calculate overall progress (completed files + current file progress)
+              const fileProgress =
+                snapshot.bytesTransferred / snapshot.totalBytes;
+              const overallProgress =
+                ((completedFiles + fileProgress) / totalFiles) * 100;
+              setUploadProgress(overallProgress);
+            },
+            (error) => {
+              console.error(`Error uploading ${file.name}:`, error);
+              resolve(); // Continue with next file even if this one fails
+            },
+            async () => {
+              try {
+                // Get download URL
+                const downloadURL = await getDownloadURL(
+                  uploadTask.snapshot.ref
+                );
+
+                // Create file upload object
+                newFiles.push({
+                  name: file.name,
+                  url: downloadURL,
+                  type: file.type,
+                  size: file.size,
+                });
+
+                completedFiles++;
+                resolve();
+              } catch (error) {
+                console.error("Error getting download URL:", error);
+                resolve(); // Continue with next file
+              }
+            }
+          );
+        });
+      }
+
+      // Update answers state with both existing and new files
+      if (newFiles.length > 0) {
+        setAnswers({
+          ...answers,
+          [currentQuestion.id]: [...existingFiles, ...newFiles],
+        });
+        console.log(`${newFiles.length} files uploaded successfully`);
+      } else {
+        setError("No files were uploaded successfully.");
+      }
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      setError("Failed to upload files. Please try again.");
+    } finally {
+      setIsUploading(false);
+      setActiveUploadTask(null);
+    }
+  };
+
+  const handleRemoveFile = async () => {
+    if (!user) return;
+
+    try {
+      const fileUpload = answers[currentQuestion.id] as FileUpload;
+
+      if (fileUpload && fileUpload.url) {
+        // Extract the file path from the download URL
+        const fileRef = ref(storage, fileUpload.url);
+
+        // Delete the file from storage
+        await deleteObject(fileRef);
+
+        // Remove from answers
+        const updatedAnswers = { ...answers };
+        delete updatedAnswers[currentQuestion.id];
+        setAnswers(updatedAnswers);
+
+        console.log("File deleted successfully");
+      }
+    } catch (error) {
+      console.error("Error removing file:", error);
+      setError("Failed to remove file. Please try again.");
+    }
+  };
+
+  const handleRemoveFileAtIndex = async (index: number) => {
+    if (!user) return;
+
+    try {
+      const files = (answers[currentQuestion.id] as FileUpload[]) || [];
+
+      if (files[index] && files[index].url) {
+        // Extract the file path from the download URL
+        const fileRef = ref(storage, files[index].url);
+
+        // Delete the file from storage
+        await deleteObject(fileRef);
+
+        // Remove from answers
+        const updatedFiles = [...files];
+        updatedFiles.splice(index, 1);
+
+        setAnswers({
+          ...answers,
+          [currentQuestion.id]: updatedFiles,
+        });
+
+        console.log(`File at index ${index} deleted successfully`);
+      }
+    } catch (error) {
+      console.error("Error removing file:", error);
+      setError("Failed to remove file. Please try again.");
+    }
+  };
 
   // Validate the current answer
   const validateCurrentAnswer = () => {
@@ -612,6 +702,26 @@ export default function QuestionnairePage() {
               "Please add at least one entry before continuing"
           );
           return false;
+        }
+        break;
+
+      case "fileUpload":
+        // File uploads are optional by default, so we don't validate them
+        // unless explicitly required
+        if (currentQuestion.required) {
+          if (
+            currentQuestion.fileType === "image" &&
+            (!currentAnswer || Object.keys(currentAnswer).length === 0)
+          ) {
+            setError("Please upload a file before continuing");
+            return false;
+          } else if (
+            currentQuestion.fileType === "multiple-images" &&
+            (!Array.isArray(currentAnswer) || currentAnswer.length === 0)
+          ) {
+            setError("Please upload at least one file before continuing");
+            return false;
+          }
         }
         break;
     }
@@ -728,6 +838,15 @@ export default function QuestionnairePage() {
             [question.id]: [{ name: "", url: "" }],
           });
           break;
+
+        case "fileUpload":
+          if (question.fileType === "multiple-images") {
+            setAnswers({
+              ...answers,
+              [question.id]: [],
+            });
+          }
+          break;
       }
     }
   }, [currentQuestionIndex, questions]);
@@ -773,280 +892,32 @@ export default function QuestionnairePage() {
     );
   }
 
-  // Render different input components based on question type
-  const renderQuestionInput = () => {
-    switch (currentQuestion.type) {
-      case "text":
-        return (
-          <div className="relative">
-            <input
-              type="text"
-              value={(answers[currentQuestion.id] as string) || ""}
-              onChange={(e) => handleAnswerChange(e.target.value)}
-              placeholder={currentQuestion.placeholder}
-              className="w-full bg-transparent text-white text-xl md:text-2xl py-4 border-b-2 border-neutral-800 focus:border-[#F58327] focus:outline-none transition-all duration-200 placeholder-neutral-600"
-            />
-          </div>
-        );
-
-      case "textarea":
-        return (
-          <div className="relative">
-            <textarea
-              value={(answers[currentQuestion.id] as string) || ""}
-              onChange={(e) => handleAnswerChange(e.target.value)}
-              placeholder={currentQuestion.placeholder}
-              rows={5}
-              className="w-full bg-transparent text-white text-xl md:text-2xl py-4 border-b-2 border-neutral-800 focus:border-[#F58327] focus:outline-none transition-all duration-200 placeholder-neutral-600 resize-none"
-            />
-          </div>
-        );
-
-      case "radio":
-        return (
-          <div className="space-y-5 mt-4">
-            {currentQuestion.options?.map((option, index) => (
-              <motion.div
-                key={option}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + index * 0.05 }}
-                className="flex items-start"
-              >
-                <div
-                  className={`flex items-center justify-center w-6 h-6 mt-1 rounded-full border-2 cursor-pointer mr-4 transition-colors duration-200 ${
-                    answers[currentQuestion.id] === option
-                      ? "border-[#F58327] bg-black"
-                      : "border-neutral-600 bg-black"
-                  }`}
-                  onClick={() => handleAnswerChange(option)}
-                >
-                  {answers[currentQuestion.id] === option && (
-                    <div className="w-2 h-2 rounded-full bg-[#F58327]"></div>
-                  )}
-                </div>
-                <label
-                  className="text-xl cursor-pointer"
-                  onClick={() => handleAnswerChange(option)}
-                >
-                  {option}
-                </label>
-              </motion.div>
-            ))}
-          </div>
-        );
-
-      case "multiselect":
-        return (
-          <div className="space-y-5 mt-4">
-            {currentQuestion.options?.map((option, index) => (
-              <motion.div
-                key={option}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + index * 0.05 }}
-                className="flex items-start"
-              >
-                <div
-                  className={`flex items-center justify-center w-6 h-6 mt-1 rounded-sm border-2 cursor-pointer mr-4 transition-colors duration-200 ${
-                    ((answers[currentQuestion.id] as string[]) || []).includes(
-                      option
-                    )
-                      ? "border-[#F58327] bg-black"
-                      : "border-neutral-600 bg-black"
-                  }`}
-                  onClick={() => handleMultiSelectChange(option)}
-                >
-                  {((answers[currentQuestion.id] as string[]) || []).includes(
-                    option
-                  ) && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#F58327"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-4 h-4"
-                    >
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  )}
-                </div>
-                <label
-                  className="text-xl cursor-pointer"
-                  onClick={() => handleMultiSelectChange(option)}
-                >
-                  {option}
-                </label>
-              </motion.div>
-            ))}
-
-            {/* Add custom option for website pages */}
-            {currentQuestion.id === "websitePages" && (
-              <div className="mt-8 pt-4 border-t border-neutral-800">
-                <p className="text-neutral-400 mb-3">Add a custom page type:</p>
-                <div className="flex items-center">
-                  <input
-                    type="text"
-                    value={customPageOption}
-                    onChange={(e) => setCustomPageOption(e.target.value)}
-                    placeholder="Enter custom page name"
-                    className="flex-1 bg-transparent border border-neutral-700 rounded-l-lg px-4 py-2 text-white focus:border-[#F58327] focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomOption}
-                    disabled={!customPageOption.trim()}
-                    className="cursor-pointer bg-[#F58327] text-white rounded-r-lg px-4 py-2 disabled:opacity-50"
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case "color":
-        return (
-          <div className="space-y-4 mt-4">
-            <p className="text-neutral-400 text-sm mb-2">
-              Enter hex color codes (e.g., #FF5733) for your brand or website
-              colors
-            </p>
-
-            {((answers[currentQuestion.id] as string[]) || []).map(
-              (color, index) => (
-                <div key={index} className="flex items-center space-x-4">
-                  <input
-                    type="color"
-                    value={color}
-                    onChange={(e) => handleColorChange(index, e.target.value)}
-                    className="w-12 h-12 rounded-md cursor-pointer border-2 border-neutral-700"
-                  />
-                  <input
-                    type="text"
-                    value={color}
-                    onChange={(e) => {
-                      // Validate hex code format
-                      const value = e.target.value;
-                      if (/^#[0-9A-F]{0,6}$/i.test(value) || value === "#") {
-                        handleColorChange(index, value);
-                      }
-                    }}
-                    placeholder="#000000"
-                    className="bg-transparent border-b-2 border-neutral-700 px-2 py-1 text-white focus:border-[#F58327] focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeColorInput(index)}
-                    className="cursor-pointer text-red-500 hover:text-red-400"
-                    aria-label="Remove color"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-              )
-            )}
-
-            <button
-              type="button"
-              onClick={addColorInput}
-              className="cursor-pointer flex items-center text-[#F58327] hover:text-[#e67016] transition-colors mt-2"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Another Color
-            </button>
-          </div>
-        );
-
-      case "websiteList":
-        return (
-          <div className="space-y-4 mt-4">
-            <p className="text-neutral-400 text-sm mb-2">
-              Add websites or keywords, one per entry
-            </p>
-
-            {(
-              (answers[currentQuestion.id] as {
-                name: string;
-                url: string;
-              }[]) || []
-            ).map((item, index) => (
-              <div
-                key={index}
-                className="space-y-2 p-4 bg-neutral-900 rounded-lg"
-              >
-                <div className="flex justify-between items-center">
-                  <h4 className="text-white text-sm font-medium">
-                    Entry {index + 1}
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => removeWebsiteEntry(index)}
-                    className="cursor-pointer text-red-500 hover:text-red-400"
-                    aria-label="Remove entry"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-3">
-                  <div className="flex-1">
-                    <label className="block text-xs text-neutral-500 mb-1">
-                      Name/Description
-                    </label>
-                    <input
-                      type="text"
-                      value={item.name}
-                      onChange={(e) =>
-                        handleWebsiteListChange(index, "name", e.target.value)
-                      }
-                      placeholder="Competitor name or keyword"
-                      className="w-full bg-black rounded border border-neutral-800 px-3 py-2 text-white focus:border-[#F58327] focus:outline-none"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-xs text-neutral-500 mb-1">
-                      URL (optional)
-                    </label>
-                    <div className="flex items-center">
-                      <Globe className="h-4 w-4 text-neutral-600 mr-2" />
-                      <input
-                        type="text"
-                        value={item.url}
-                        onChange={(e) =>
-                          handleWebsiteListChange(index, "url", e.target.value)
-                        }
-                        placeholder="www.example.com"
-                        className="w-full bg-black border-b border-neutral-800 px-1 py-2 text-white focus:border-[#F58327] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={addWebsiteEntry}
-              className="cursor-pointer flex items-center text-[#F58327] hover:text-[#e67016] transition-colors mt-2"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Another Entry
-            </button>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="text-red-400">
-            Unsupported question type: {currentQuestion.type}
-          </div>
-        );
-    }
+  // Create props for question component
+  const questionComponentProps = {
+    questionId: currentQuestion.id,
+    type: currentQuestion.type,
+    placeholder: currentQuestion.placeholder,
+    options: currentQuestion.options,
+    answers,
+    handleAnswerChange,
+    handleMultiSelectChange,
+    handleColorChange,
+    addColorInput,
+    removeColorInput,
+    handleWebsiteListChange,
+    addWebsiteEntry,
+    removeWebsiteEntry,
+    handleAddCustomOption,
+    customPageOption,
+    setCustomPageOption,
+    handleFileUpload,
+    handleMultipleFileUpload,
+    handleRemoveFile,
+    handleRemoveFileAtIndex,
+    isUploading,
+    uploadProgress,
+    fileType: currentQuestion.fileType,
+    acceptedFileTypes: currentQuestion.acceptedFileTypes,
   };
 
   return (
@@ -1125,7 +996,12 @@ export default function QuestionnairePage() {
                 )}
               </div>
 
-              <div className="md:w-2/3">{renderQuestionInput()}</div>
+              <div className="md:w-2/3">
+                {getQuestionComponent(
+                  currentQuestion.type,
+                  questionComponentProps
+                )}
+              </div>
             </div>
           </motion.div>
         </AnimatePresence>

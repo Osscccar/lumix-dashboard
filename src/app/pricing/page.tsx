@@ -27,6 +27,10 @@ const baseFeatures = [
   "Secure hosting & SSL",
   "Fast loading speeds to rank on Google",
   "Connect your current domain or buy one",
+  {
+    text: "Professional email address",
+    subtext: "(Eg. sales@yourwebsite.com)",
+  },
 ];
 
 // Additional features specific to each plan
@@ -34,7 +38,11 @@ const launchFeatures: string[] = [];
 
 const businessFeatures = [
   "Advanced SEO to rank high on Google",
-  "Unlimited done-for-you edits",
+  { text: "FREE custom domain", subtext: "(Eg. www.yourwebsite.com)" },
+  {
+    text: "3 professional email addresses",
+    subtext: "(Eg. sales@yourwebsite.com)",
+  },
   "3rd party integrations on your website to convert visitors into customers such as: Live chat support, booking forms, advanced designs & much more.",
   "VIP support and extra fast updates",
 ];
@@ -46,6 +54,7 @@ const enterpriseFeatures = [
   "Unlimited edits",
   "Sell subscriptions & digital products",
   "Enhancing marketing integrations",
+  "Complex animations and design",
 ];
 
 export default function PricingPage() {
@@ -106,13 +115,22 @@ export default function PricingPage() {
     }
   };
 
+  // Monthly prices - CORRECT PRICES
   const monthlyPrices = {
-    launch: "$21.42",
-    business: "$44.25",
-    enterprise: "$74.25",
+    launch: "$29",
+    business: "$59",
+    enterprise: "$99",
   };
 
-  const yearlyPrices = {
+  // Yearly prices converted to monthly cost (25% discount applied)
+  const yearlyPricesAsMonthly = {
+    launch: "$21.42", // $257/12 ≈ $21.42, reflects 25% discount from $29
+    business: "$44.25", // $531/12 ≈ $44.25, reflects 25% discount from $59
+    enterprise: "$74.25", // $891/12 ≈ $74.25, reflects 25% discount from $99
+  };
+
+  // Yearly prices total
+  const yearlyPricesTotal = {
     launch: "$257",
     business: "$531",
     enterprise: "$891",
@@ -130,9 +148,10 @@ export default function PricingPage() {
     enterprise: "$600",
   };
 
-  const billingText = "/month";
+  const billingText =
+    billingCycle === "monthly" ? "/month" : "/month, billed annually";
   const saveText =
-    billingCycle === "yearly" ? "Save 25% on yearly subscription" : "";
+    billingCycle === "yearly" ? "Save 25% with annual billing" : "";
 
   if (loading) {
     return (
@@ -149,29 +168,31 @@ export default function PricingPage() {
     <div className="flex flex-col min-h-screen bg-black text-white px-4 py-12">
       <div className="max-w-7xl mx-auto w-full">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold">Choose Your Plan</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-white">
+            Choose Your Plan
+          </h1>
           <p className="mt-4 text-gray-400 max-w-3xl mx-auto">
             Select the perfect plan to bring your website to life. All plans
             include top-notch design and functionality tailored to your needs.
           </p>
 
           {/* Billing toggle */}
-          <div className="mt-8 inline-flex bg-gray-800 rounded-full p-1">
+          <div className="mt-8 inline-flex bg-gray-800 rounded-full p-1.5 border border-gray-700/50 shadow-xl">
             <button
-              className={`cursor-pointer px-6 py-2 rounded-full text-sm font-medium ${
+              className={`cursor-pointer px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
                 billingCycle === "monthly"
-                  ? "cursor-pointer bg-[#F58327] text-white"
-                  : "cursor-pointer text-gray-400"
+                  ? "bg-[#F58327] text-white shadow-lg"
+                  : "text-gray-400 hover:text-gray-200"
               }`}
               onClick={() => setBillingCycle("monthly")}
             >
               Monthly
             </button>
             <button
-              className={`cursor-pointer px-6 py-2 rounded-full text-sm font-medium ${
+              className={`cursor-pointer px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
                 billingCycle === "yearly"
-                  ? "cursor-pointer bg-[#F58327] text-white"
-                  : "cursor-pointer text-gray-400"
+                  ? "bg-[#F58327] text-white shadow-lg"
+                  : "text-gray-400 hover:text-gray-200"
               }`}
               onClick={() => setBillingCycle("yearly")}
             >
@@ -180,7 +201,7 @@ export default function PricingPage() {
           </div>
 
           {saveText && (
-            <p className="text-[#F58327] mt-2 text-sm font-medium">
+            <p className="text-[#F58327] mt-3 text-sm font-medium">
               {saveText}
             </p>
           )}
@@ -189,9 +210,21 @@ export default function PricingPage() {
         {/* Plan cards */}
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto mt-8">
           {/* Launch Plan */}
-          <div className="bg-black border border-gray-800 rounded-xl p-6 flex flex-col h-full">
-            <div className="flex justify-center mb-4">
-              <div className="bg-[#F58327]/20 p-3 rounded-full">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="relative bg-black border border-gray-800 rounded-xl p-6 flex flex-col h-full overflow-hidden shadow-xl hover:border-[#F58327]/50 transition-all duration-300"
+          >
+            {/* Plan Badge */}
+            <div className="absolute top-4 right-4">
+              <div className="bg-gray-800 text-[#F58327] text-xs font-semibold px-2.5 py-1 rounded-full">
+                Launch
+              </div>
+            </div>
+
+            <div className="flex justify-center mb-6">
+              <div className="bg-[#F58327]/20 p-3.5 rounded-full shadow-lg">
                 <svg
                   width="32"
                   height="32"
@@ -206,27 +239,29 @@ export default function PricingPage() {
                 </svg>
               </div>
             </div>
+
             <h3 className="text-center font-medium text-lg mb-1">
               Launch Plan
             </h3>
-            <div className="text-center mb-4">
+
+            <div className="text-center mb-6">
               <div className="flex items-center justify-center">
                 <span className="text-gray-400 text-lg">$</span>
-                <span className="text-[#F58327] text-4xl font-bold mx-1">
-                  {billingCycle === "monthly" ? "21" : "257"}
+                <span className="text-[#F58327] text-5xl font-bold mx-1">
+                  {billingCycle === "monthly"
+                    ? monthlyPrices.launch.replace("$", "")
+                    : yearlyPricesAsMonthly.launch.replace("$", "")}
                 </span>
-                {billingCycle === "monthly" && (
-                  <span className="text-[#F58327] text-2xl">.42</span>
-                )}
               </div>
-              <div className="text-gray-400 text-sm">
-                {billingCycle === "monthly"
-                  ? `${billingText}`
-                  : "billed annually"}
-              </div>
+              <div className="text-gray-400 text-sm mt-1">{billingText}</div>
+              {billingCycle === "yearly" && (
+                <div className="text-xs text-gray-400 mt-1">
+                  {yearlyPricesTotal.launch} total
+                </div>
+              )}
             </div>
 
-            <div className="border-t border-gray-800 py-3 mb-4 text-center">
+            <div className="border-t border-gray-800 py-3 mb-6 text-center">
               <div className="flex items-center justify-center">
                 <span className="line-through text-gray-500 mr-2">
                   {originalSetupFees.launch}
@@ -238,7 +273,7 @@ export default function PricingPage() {
             <button
               onClick={() => handleSelectPlan("launch")}
               disabled={isProcessing}
-              className="cursor-pointer bg-[#F58327] hover:bg-[#e67016] transition-colors duration-200 text-white py-3 px-4 rounded-full font-medium mb-6"
+              className="cursor-pointer bg-[#F58327] hover:bg-[#e67016] transition-colors duration-300 text-white py-3.5 px-4 rounded-full font-medium mb-6 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isProcessing ? (
                 <div className="flex items-center justify-center">
@@ -250,21 +285,44 @@ export default function PricingPage() {
               )}
             </button>
 
-            <h4 className="font-medium mb-4">Included in all plans:</h4>
+            <h4 className="font-medium mb-4 text-[#F58327]">
+              Included in all plans:
+            </h4>
             <div className="space-y-3 mt-2 flex-grow">
               {baseFeatures.map((feature, idx) => (
                 <div key={idx} className="flex items-start">
                   <Check className="h-5 w-5 text-[#F58327] mr-2 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-300">{feature}</span>
+                  <div>
+                    <span className="text-sm text-gray-300">
+                      {typeof feature === "string" ? feature : feature.text}
+                    </span>
+                    {typeof feature !== "string" && feature.subtext && (
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {feature.subtext}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Business Plan */}
-          <div className="bg-black border border-gray-800 rounded-xl p-6 flex flex-col h-full">
-            <div className="flex justify-center mb-4">
-              <div className="bg-[#F58327]/20 p-3 rounded-full">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="relative bg-black border border-gray-800 rounded-xl p-6 flex flex-col h-full overflow-hidden shadow-xl hover:border-[#F58327]/50 transition-all duration-300"
+          >
+            {/* Plan Badge */}
+            <div className="absolute top-4 right-4">
+              <div className="bg-gray-800 text-[#F58327] text-xs font-semibold px-2.5 py-1 rounded-full">
+                Business
+              </div>
+            </div>
+
+            <div className="flex justify-center mb-6">
+              <div className="bg-[#F58327]/20 p-3.5 rounded-full shadow-lg">
                 <svg
                   width="32"
                   height="32"
@@ -279,27 +337,29 @@ export default function PricingPage() {
                 </svg>
               </div>
             </div>
+
             <h3 className="text-center font-medium text-lg mb-1">
               Business Plan
             </h3>
-            <div className="text-center mb-4">
+
+            <div className="text-center mb-6">
               <div className="flex items-center justify-center">
                 <span className="text-gray-400 text-lg">$</span>
-                <span className="text-[#F58327] text-4xl font-bold mx-1">
-                  {billingCycle === "monthly" ? "44" : "531"}
+                <span className="text-[#F58327] text-5xl font-bold mx-1">
+                  {billingCycle === "monthly"
+                    ? monthlyPrices.business.replace("$", "")
+                    : yearlyPricesAsMonthly.business.replace("$", "")}
                 </span>
-                {billingCycle === "monthly" && (
-                  <span className="text-[#F58327] text-2xl">.25</span>
-                )}
               </div>
-              <div className="text-gray-400 text-sm">
-                {billingCycle === "monthly"
-                  ? `${billingText}`
-                  : "billed annually"}
-              </div>
+              <div className="text-gray-400 text-sm mt-1">{billingText}</div>
+              {billingCycle === "yearly" && (
+                <div className="text-xs text-gray-400 mt-1">
+                  {yearlyPricesTotal.business} total
+                </div>
+              )}
             </div>
 
-            <div className="border-t border-gray-800 py-3 mb-4 text-center">
+            <div className="border-t border-gray-800 py-3 mb-6 text-center">
               <div className="flex items-center justify-center">
                 <span className="line-through text-gray-500 mr-2">
                   {originalSetupFees.business}
@@ -313,7 +373,7 @@ export default function PricingPage() {
             <button
               onClick={() => handleSelectPlan("business")}
               disabled={isProcessing}
-              className="cursor-pointer bg-[#F58327] hover:bg-[#e67016] transition-colors duration-200 text-white py-3 px-4 rounded-full font-medium mb-6"
+              className="cursor-pointer bg-[#F58327] hover:bg-[#e67016] transition-colors duration-300 text-white py-3.5 px-4 rounded-full font-medium mb-6 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isProcessing ? (
                 <div className="flex items-center justify-center">
@@ -325,21 +385,44 @@ export default function PricingPage() {
               )}
             </button>
 
-            <h4 className="font-medium mb-4">Everything in Launch, and:</h4>
+            <h4 className="font-medium mb-4 text-[#F58327]">
+              Everything in Launch, and:
+            </h4>
             <div className="space-y-3 mt-2 flex-grow">
               {businessFeatures.map((feature, idx) => (
                 <div key={idx} className="flex items-start">
                   <Check className="h-5 w-5 text-[#F58327] mr-2 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-300">{feature}</span>
+                  <div>
+                    <span className="text-sm text-gray-300">
+                      {typeof feature === "string" ? feature : feature.text}
+                    </span>
+                    {typeof feature !== "string" && feature.subtext && (
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {feature.subtext}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Enterprise Plan */}
-          <div className="bg-black border border-gray-800 rounded-xl p-6 flex flex-col h-full">
-            <div className="flex justify-center mb-4">
-              <div className="bg-[#F58327]/20 p-3 rounded-full">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="relative bg-black border border-gray-800 rounded-xl p-6 flex flex-col h-full overflow-hidden shadow-xl hover:border-[#F58327]/50 transition-all duration-300"
+          >
+            {/* Plan Badge */}
+            <div className="absolute top-4 right-4">
+              <div className="bg-gray-800 text-[#F58327] text-xs font-semibold px-2.5 py-1 rounded-full">
+                Enterprise
+              </div>
+            </div>
+
+            <div className="flex justify-center mb-6">
+              <div className="bg-[#F58327]/20 p-3.5 rounded-full shadow-lg">
                 <svg
                   width="32"
                   height="32"
@@ -354,27 +437,29 @@ export default function PricingPage() {
                 </svg>
               </div>
             </div>
+
             <h3 className="text-center font-medium text-lg mb-1">
               Enterprise Plan
             </h3>
-            <div className="text-center mb-4">
+
+            <div className="text-center mb-6">
               <div className="flex items-center justify-center">
                 <span className="text-gray-400 text-lg">$</span>
-                <span className="text-[#F58327] text-4xl font-bold mx-1">
-                  {billingCycle === "monthly" ? "74" : "891"}
+                <span className="text-[#F58327] text-5xl font-bold mx-1">
+                  {billingCycle === "monthly"
+                    ? monthlyPrices.enterprise.replace("$", "")
+                    : yearlyPricesAsMonthly.enterprise.replace("$", "")}
                 </span>
-                {billingCycle === "monthly" && (
-                  <span className="text-[#F58327] text-2xl">.25</span>
-                )}
               </div>
-              <div className="text-gray-400 text-sm">
-                {billingCycle === "monthly"
-                  ? `${billingText}`
-                  : "billed annually"}
-              </div>
+              <div className="text-gray-400 text-sm mt-1">{billingText}</div>
+              {billingCycle === "yearly" && (
+                <div className="text-xs text-gray-400 mt-1">
+                  {yearlyPricesTotal.enterprise} total
+                </div>
+              )}
             </div>
 
-            <div className="border-t border-gray-800 py-3 mb-4 text-center">
+            <div className="border-t border-gray-800 py-3 mb-6 text-center">
               <div className="flex items-center justify-center">
                 <span className="line-through text-gray-500 mr-2">
                   {originalSetupFees.enterprise}
@@ -388,7 +473,7 @@ export default function PricingPage() {
             <button
               onClick={() => handleSelectPlan("enterprise")}
               disabled={isProcessing}
-              className="cursor-pointer bg-[#F58327] hover:bg-[#e67016] transition-colors duration-200 text-white py-3 px-4 rounded-full font-medium mb-6"
+              className="cursor-pointer bg-[#F58327] hover:bg-[#e67016] transition-colors duration-300 text-white py-3.5 px-4 rounded-full font-medium mb-6 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isProcessing ? (
                 <div className="flex items-center justify-center">
@@ -400,16 +485,27 @@ export default function PricingPage() {
               )}
             </button>
 
-            <h4 className="font-medium mb-4">Everything in Business, and:</h4>
+            <h4 className="font-medium mb-4 text-[#F58327]">
+              Everything in Business, and:
+            </h4>
             <div className="space-y-3 mt-2 flex-grow">
               {enterpriseFeatures.map((feature, idx) => (
                 <div key={idx} className="flex items-start">
                   <Check className="h-5 w-5 text-[#F58327] mr-2 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-300">{feature}</span>
+                  <div>
+                    <span className="text-sm text-gray-300">
+                      {typeof feature === "string" ? feature : feature.text}
+                    </span>
+                    {typeof feature !== "string" && feature.subtext && (
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {feature.subtext}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

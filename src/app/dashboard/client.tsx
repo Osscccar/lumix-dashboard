@@ -180,11 +180,12 @@ const ProjectPhasesSection = ({
                 phase.status === "pending" ? "opacity-70" : ""
               }`}
             >
-              <div className="flex items-start gap-4">
-                {/* Left column: icon + tasks */}
-                <div>
+              <div className="flex flex-col">
+                {/* Header: icon + title + status badge */}
+                <div className="flex items-center mb-3">
+                  {/* Icon */}
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
                       phase.status === "completed"
                         ? "bg-[#D1FAE5]"
                         : phase.status === "active"
@@ -195,51 +196,49 @@ const ProjectPhasesSection = ({
                     {getPhaseIcon(phase.name, phase.status)}
                   </div>
 
-                  <div className="space-y-2">
-                    {phase.tasks.map((task, taskIndex) => (
-                      <div key={taskIndex} className="flex items-center">
-                        {task.completed ? (
-                          <CheckCircle className="h-3.5 w-3.5 text-[#10B981] mr-2" />
-                        ) : phase.status === "active" ? (
-                          <div className="h-3.5 w-3.5 rounded-full border border-[#F58327] mr-2 flex items-center justify-center">
-                            <div className="h-1.5 w-1.5 bg-[#F58327] rounded-full"></div>
-                          </div>
-                        ) : (
-                          <div className="h-3.5 w-3.5 rounded-full border border-[#D1D5DB] mr-2"></div>
-                        )}
-                        <span
-                          className={`text-xs ${
-                            phase.status === "pending"
-                              ? "text-[#6B7280]"
-                              : "text-[#4B5563]"
-                          }`}
-                        >
-                          {task.name}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  {/* Phase name */}
+                  <p className="text-sm font-medium text-[#111827] mr-auto">
+                    {phase.name}
+                  </p>
+
+                  {/* Status badge - pushed to the right */}
+                  {phase.status === "active" && (
+                    <span className="px-2 py-0.5 text-[10px] bg-[#FFF8F3] text-[#F58327] rounded-full border border-[#FFEAD5]">
+                      Active
+                    </span>
+                  )}
+
+                  {phase.status === "completed" && (
+                    <span className="px-2 py-0.5 text-[10px] bg-[#D1FAE5] text-[#10B981] rounded-full border border-[#A7F3D0]">
+                      Complete
+                    </span>
+                  )}
                 </div>
 
-                {/* Right column: title + status */}
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium text-[#111827]">
-                      {phase.name}
-                    </p>
-
-                    {phase.status === "active" && (
-                      <span className="px-2 py-0.5 text-[10px] bg-[#FFF8F3] text-[#F58327] rounded-full border border-[#FFEAD5]">
-                        Active
+                {/* Tasks - aligned to the left */}
+                <div className="space-y-2 pl-1">
+                  {phase.tasks.map((task, taskIndex) => (
+                    <div key={taskIndex} className="flex items-center">
+                      {task.completed ? (
+                        <CheckCircle className="h-3.5 w-3.5 text-[#10B981] mr-2" />
+                      ) : phase.status === "active" ? (
+                        <div className="h-3.5 w-3.5 rounded-full border border-[#F58327] mr-2 flex items-center justify-center">
+                          <div className="h-1.5 w-1.5 bg-[#F58327] rounded-full"></div>
+                        </div>
+                      ) : (
+                        <div className="h-3.5 w-3.5 rounded-full border border-[#D1D5DB] mr-2"></div>
+                      )}
+                      <span
+                        className={`text-xs ${
+                          phase.status === "pending"
+                            ? "text-[#6B7280]"
+                            : "text-[#4B5563]"
+                        }`}
+                      >
+                        {task.name}
                       </span>
-                    )}
-
-                    {phase.status === "completed" && (
-                      <span className="px-2 py-0.5 text-[10px] bg-[#D1FAE5] text-[#10B981] rounded-full border border-[#A7F3D0]">
-                        Complete
-                      </span>
-                    )}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -785,16 +784,20 @@ export default function Dashboard() {
                               </span>
                             </a>
                           ) : (
-                            <a className="cursor-pointer flex flex-col items-center justify-center p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB] hover:border-[#F58327] hover:bg-[#FFF8F3] transition-colors">
-                              <Edit className="h-6 w-6 text-[#F58327] mb-2" />
-                              <span className="text-sm font-medium text-[#4B5563]">
-                                Open Editor
-                              </span>
-                              <p className="text-[#4B5563]/90 text-xs">
-                                Project in progress
-                              </p>
-                            </a>
+                            <div className="relative group">
+                              <div className="flex flex-col items-center justify-center p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB] opacity-60 cursor-not-allowed">
+                                <Edit className="h-6 w-6 text-[#A1A1AA] mb-2" />
+                                <span className="text-sm font-medium text-[#A1A1AA]">
+                                  Open Editor
+                                </span>
+                              </div>
+                              {/* Tooltip */}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                Your project is still in progress
+                              </div>
+                            </div>
                           )}
+
                           {displayData?.revisionsUrl ? (
                             <a
                               href={
@@ -810,16 +813,20 @@ export default function Dashboard() {
                               </span>
                             </a>
                           ) : (
-                            <a className="cursor-pointer flex flex-col items-center justify-center p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB] hover:border-[#F58327] hover:bg-[#FFF8F3] transition-colors">
-                              <PenTool className="h-6 w-6 text-[#F58327] mb-2" />
-                              <span className="text-sm font-medium text-[#4B5563]">
-                                Open Revisions Tool
-                              </span>
-                              <p className="text-[#4B5563]/90 text-xs">
-                                Project in progress
-                              </p>
-                            </a>
+                            <div className="relative group">
+                              <div className="flex flex-col items-center justify-center p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB] opacity-60 cursor-not-allowed">
+                                <PenTool className="h-6 w-6 text-[#A1A1AA] mb-2" />
+                                <span className="text-sm font-medium text-[#A1A1AA]">
+                                  Open Revisions Tool
+                                </span>
+                              </div>
+                              {/* Tooltip */}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                Your project is still in progress
+                              </div>
+                            </div>
                           )}
+
                           <button
                             onClick={handleSupport}
                             className="cursor-pointer flex flex-col items-center justify-center p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB] hover:border-[#F58327] hover:bg-[#FFF8F3] transition-colors"
