@@ -616,7 +616,6 @@ export function getQuestionComponent(
     case "fileUpload":
       return <FileUploadInput {...props} />;
     case "domainSearch":
-      // Correctly map the props needed by DomainSearchInput
       return (
         <DomainSearchInput
           questionId={props.questionId}

@@ -37,7 +37,7 @@ export interface Question {
 export const questionsData: Question[] = [
   {
     id: "customDomainName",
-    type: "domainSearch", // New question type for domain search
+    type: "domainSearch",
     question:
       "What custom domain would you like for your website? (Free with your plan)",
     placeholder: "Search for a domain (e.g., yourbusiness.com)",

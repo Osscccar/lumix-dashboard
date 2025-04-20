@@ -1,6 +1,6 @@
 // src/components/questionnaire/DomainSearchInput.tsx
 import { useState, useEffect, useRef } from "react";
-import { Search, Loader2, Check, X } from "lucide-react";
+import { Search, Loader2, Globe, AlertTriangle, X } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 
 type DomainSearchInputProps = {
@@ -61,6 +61,14 @@ export const DomainSearchInput = ({
         const data = await response.json();
         setSuggestions(data.domains || []);
         setShowSuggestions(data.domains && data.domains.length > 0);
+
+        // If we had a selected domain but changed the search, clear it
+        if (
+          selectedDomain &&
+          !selectedDomain.name.includes(debouncedSearchQuery.toLowerCase())
+        ) {
+          setSelectedDomain(null);
+        }
       } catch (err) {
         console.error("Domain search error:", err);
         setError(
@@ -73,7 +81,7 @@ export const DomainSearchInput = ({
     };
 
     fetchDomainSuggestions();
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery, selectedDomain]);
 
   // Handle click outside to close suggestions
   useEffect(() => {
@@ -102,6 +110,23 @@ export const DomainSearchInput = ({
     setShowSuggestions(false);
   };
 
+  // Clear input and selection
+  const handleClearInput = () => {
+    setSearchQuery("");
+    onChange("");
+    setSelectedDomain(null);
+    inputRef.current?.focus();
+  };
+
+  // Format price for display
+  const formatPrice = (price: number): string => {
+    return new Intl.NumberFormat("en-AU", {
+      style: "currency",
+      currency: "AUD",
+      minimumFractionDigits: 2,
+    }).format(price);
+  };
+
   return (
     <div className="relative">
       <div className="relative">
@@ -116,7 +141,17 @@ export const DomainSearchInput = ({
           }
           className="w-full bg-transparent text-white text-xl md:text-2xl py-4 pr-10 border-b-2 border-neutral-800 focus:border-[#F58327] focus:outline-none transition-all duration-200 placeholder-neutral-600"
         />
-        <div className="absolute right-0 top-1/2 transform -translate-y-1/2 text-neutral-500">
+        <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center text-neutral-500">
+          {searchQuery && (
+            <button
+              onClick={handleClearInput}
+              className="p-1 mr-1 hover:bg-gray-800 rounded-full transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4 text-gray-400 hover:text-white" />
+            </button>
+          )}
+
           {isSearching ? (
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
@@ -129,6 +164,7 @@ export const DomainSearchInput = ({
       {selectedDomain && (
         <div className="mt-3 bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex justify-between items-center">
           <div className="flex items-center">
+            <Globe className="h-5 w-5 text-[#F58327] mr-2" />
             <span className="text-white font-medium">
               {selectedDomain.name}
             </span>
@@ -137,12 +173,17 @@ export const DomainSearchInput = ({
             </span>
           </div>
           <span className="text-[#F58327] font-medium">
-            ${Number(selectedDomain.price).toFixed(2)} {selectedDomain.currency}
+            {formatPrice(selectedDomain.price)}
           </span>
         </div>
       )}
 
-      {error && <div className="mt-2 text-red-500 text-sm">{error}</div>}
+      {error && (
+        <div className="mt-2 text-red-500 text-sm flex items-center">
+          <AlertTriangle className="h-4 w-4 mr-1 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Suggestions dropdown */}
       {showSuggestions && suggestions.length > 0 && (
@@ -165,19 +206,21 @@ export const DomainSearchInput = ({
                 </span>
               </div>
               <span className="text-[#F58327]">
-                ${Number(suggestion.price).toFixed(2)} {suggestion.currency}
+                {formatPrice(suggestion.price)}
               </span>
             </div>
           ))}
         </div>
       )}
 
+      {/* No results message */}
       {searchQuery &&
         !isSearching &&
         debouncedSearchQuery.length >= 2 &&
         suggestions.length === 0 &&
         !error && (
-          <div className="mt-2 text-yellow-500 text-sm">
+          <div className="mt-2 text-yellow-500 text-sm flex items-center">
+            <AlertTriangle className="h-4 w-4 mr-1" />
             No domains found under $15 AUD. Try a different search.
           </div>
         )}
