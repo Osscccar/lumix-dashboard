@@ -25,6 +25,8 @@ export interface UserData {
   questionnaireAnswers?: QuestionnaireAnswers;
   createdAt?: string;
   updatedAt?: string;
+  lastLogin?: string; // Added lastLogin field
+  authProvider?: string; // Added authProvider field
   planType?: string;
   billingCycle?: string;
   projectPhases?: ProjectPhase[]; // Added project phases to the user data type
@@ -38,6 +40,8 @@ export interface UserData {
   questionnaireReminderStatus?: string;
   firstReminderTime?: string;
   secondReminderTime?: string;
+  emailVerified?: boolean; // Added emailVerified field
+  verifiedAt?: string; // Added verifiedAt field
 }
 
 export interface FeedbackMessage {

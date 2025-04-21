@@ -1,5 +1,5 @@
 // src/components/questionnaire/DomainSearchInput.tsx
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Search,
   Loader2,
@@ -44,7 +44,12 @@ const COMMON_TLDS = [
   ".shop",
 ];
 
-export const DomainSearchInput = (props: DomainSearchInputProps) => {
+export const DomainSearchInput = ({
+  questionId,
+  placeholder,
+  value,
+  onChange,
+}: DomainSearchInputProps) => {
   // State
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<DomainSuggestion[]>([]);
@@ -66,28 +71,28 @@ export const DomainSearchInput = (props: DomainSearchInputProps) => {
 
   // Initialize component based on provided value
   useEffect(() => {
-    if (!props.value) return;
+    if (!value) return;
 
-    if (props.value.startsWith("customDomain:")) {
+    if (value.startsWith("customDomain:")) {
       // This is a custom domain
-      const domainValue = props.value.replace("customDomain:", "");
+      const domainValue = value.replace("customDomain:", "");
       setCustomDomain(domainValue);
       setShowCustomDomainInput(true);
       setSelectedDomain(null);
       setSearchQuery("");
     } else {
       // This is a searched domain
-      setSearchQuery(props.value);
+      setSearchQuery(value);
       setCustomDomain("");
       setShowCustomDomainInput(false);
 
       // Try to find domain in suggestions if they exist
-      const foundDomain = suggestions.find((s) => s.name === props.value);
+      const foundDomain = suggestions.find((s) => s.name === value);
       if (foundDomain) {
         setSelectedDomain(foundDomain);
       }
     }
-  }, [props.value, suggestions]);
+  }, [value, suggestions]);
 
   // Strip TLDs from search query to get the base domain name
   const getCleanSearchQuery = (query: string): string => {
@@ -207,7 +212,7 @@ export const DomainSearchInput = (props: DomainSearchInputProps) => {
   // Handle selecting a domain from suggestions
   const handleSelectDomain = (domain: DomainSuggestion) => {
     setSearchQuery(domain.name);
-    props.onChange(domain.name); // Store normal domain directly
+    onChange(domain.name); // Store normal domain directly
     setSelectedDomain(domain);
     setShowSuggestions(false);
   };
@@ -229,7 +234,7 @@ export const DomainSearchInput = (props: DomainSearchInputProps) => {
   // Clear domain search input
   const handleClearSearchInput = () => {
     setSearchQuery("");
-    props.onChange("");
+    onChange("");
     setSelectedDomain(null);
     setHasSearched(false);
     inputRef.current?.focus();
@@ -240,13 +245,13 @@ export const DomainSearchInput = (props: DomainSearchInputProps) => {
     const value = e.target.value;
     setCustomDomain(value);
     // Store with special prefix to identify it as a custom domain
-    props.onChange(value ? `customDomain:${value}` : "");
+    onChange(value ? `customDomain:${value}` : "");
   };
 
   // Clear custom domain input
   const handleClearCustomDomain = () => {
     setCustomDomain("");
-    props.onChange("");
+    onChange("");
   };
 
   // Toggle between search and custom domain input
@@ -258,11 +263,11 @@ export const DomainSearchInput = (props: DomainSearchInputProps) => {
       // Switching to custom domain input
       setSelectedDomain(null);
       setSearchQuery("");
-      props.onChange(customDomain ? `customDomain:${customDomain}` : "");
+      onChange(customDomain ? `customDomain:${customDomain}` : "");
     } else {
       // Switching to domain search
       setCustomDomain("");
-      props.onChange(selectedDomain ? selectedDomain.name : searchQuery);
+      onChange(selectedDomain ? selectedDomain.name : searchQuery);
     }
   };
 
@@ -275,297 +280,178 @@ export const DomainSearchInput = (props: DomainSearchInputProps) => {
     }).format(price);
   };
 
-  // Render the search input section
-  const renderSearchInput = () => {
-    const elements = [];
+  // Main JSX rendering
+  return (
+    <div className="relative">
+      {!showCustomDomainInput ? (
+        // Domain search section
+        <>
+          <div className="relative">
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchInputChange}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              placeholder={
+                placeholder || "Search for a domain (e.g. yourbusiness.com)"
+              }
+              className="w-full bg-transparent text-white text-xl md:text-2xl py-4 pr-10 border-b-2 border-neutral-800 focus:border-[#F58327] focus:outline-none transition-all duration-200 placeholder-neutral-600"
+            />
+            <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center text-neutral-500">
+              {searchQuery && (
+                <button
+                  onClick={handleClearSearchInput}
+                  className="p-1 mr-1 hover:bg-gray-800 rounded-full transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4 text-gray-400 hover:text-white" />
+                </button>
+              )}
+              {isSearching ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Search className="h-5 w-5" />
+              )}
+            </div>
+          </div>
 
-    // Search input field
-    elements.push(
-      React.createElement(
-        "div",
-        { key: "search-input", className: "relative" },
-        React.createElement("input", {
-          ref: inputRef,
-          type: "text",
-          value: searchQuery,
-          onChange: handleSearchInputChange,
-          onFocus: () => suggestions.length > 0 && setShowSuggestions(true),
-          placeholder:
-            props.placeholder || "Search for a domain (e.g. yourbusiness.com)",
-          className:
-            "w-full bg-transparent text-white text-xl md:text-2xl py-4 pr-10 border-b-2 border-neutral-800 focus:border-[#F58327] focus:outline-none transition-all duration-200 placeholder-neutral-600",
-        }),
-        React.createElement(
-          "div",
-          {
-            className:
-              "absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center text-neutral-500",
-          },
-          searchQuery &&
-            React.createElement(
-              "button",
-              {
-                onClick: handleClearSearchInput,
-                className:
-                  "p-1 mr-1 hover:bg-gray-800 rounded-full transition-colors",
-                "aria-label": "Clear search",
-              },
-              React.createElement(X, {
-                className: "h-4 w-4 text-gray-400 hover:text-white",
-              })
-            ),
-          isSearching
-            ? React.createElement(Loader2, {
-                className: "h-5 w-5 animate-spin",
-              })
-            : React.createElement(Search, { className: "h-5 w-5" })
-        )
-      )
-    );
+          {/* Selected domain display */}
+          {selectedDomain && (
+            <div className="mt-3 bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex justify-between items-center">
+              <div className="flex items-center">
+                <Globe className="h-5 w-5 text-[#F58327] mr-2" />
+                <span className="text-white font-medium">
+                  {selectedDomain.name}
+                </span>
+                <span className="ml-2 text-green-400 text-xs px-2 py-0.5 rounded-full bg-green-900/30 border border-green-800">
+                  Available
+                </span>
+              </div>
+              <span className="text-[#F58327] font-medium">
+                {formatPrice(selectedDomain.price)}
+              </span>
+            </div>
+          )}
 
-    // Selected domain display
-    if (selectedDomain) {
-      elements.push(
-        React.createElement(
-          "div",
-          {
-            key: "selected-domain",
-            className:
-              "mt-3 bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex justify-between items-center",
-          },
-          React.createElement(
-            "div",
-            { className: "flex items-center" },
-            React.createElement(Globe, {
-              className: "h-5 w-5 text-[#F58327] mr-2",
-            }),
-            React.createElement(
-              "span",
-              { className: "text-white font-medium" },
-              selectedDomain.name
-            ),
-            React.createElement(
-              "span",
-              {
-                className:
-                  "ml-2 text-green-400 text-xs px-2 py-0.5 rounded-full bg-green-900/30 border border-green-800",
-              },
-              "Available"
-            )
-          ),
-          React.createElement(
-            "span",
-            { className: "text-[#F58327] font-medium" },
-            formatPrice(selectedDomain.price)
-          )
-        )
-      );
-    }
+          {/* Error message */}
+          {error && (
+            <div className="mt-2 text-red-500 text-sm flex items-center">
+              <AlertTriangle className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-    // Error message
-    if (error) {
-      elements.push(
-        React.createElement(
-          "div",
-          {
-            key: "error-message",
-            className: "mt-2 text-red-500 text-sm flex items-center",
-          },
-          React.createElement(AlertTriangle, {
-            className: "h-4 w-4 mr-1 flex-shrink-0",
-          }),
-          React.createElement("span", {}, error)
-        )
-      );
-    }
+          {/* Suggestions dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className="absolute z-10 mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            >
+              {suggestions.map((suggestion) => (
+                <div
+                  key={suggestion.name}
+                  className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-700 transition-colors duration-200"
+                  onClick={() => handleSelectDomain(suggestion)}
+                >
+                  <div className="flex items-center">
+                    <span className="text-white text-lg mr-2">
+                      {suggestion.name}
+                    </span>
+                    <span className="text-green-400 text-xs px-2 py-0.5 rounded-full bg-green-900/30 border border-green-800">
+                      Available
+                    </span>
+                  </div>
+                  <span className="text-[#F58327]">
+                    {formatPrice(suggestion.price)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
-    // Suggestions dropdown
-    if (showSuggestions && suggestions.length > 0) {
-      elements.push(
-        React.createElement(
-          "div",
-          {
-            key: "suggestions",
-            ref: suggestionsRef,
-            className:
-              "absolute z-10 mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto",
-          },
-          suggestions.map((suggestion) =>
-            React.createElement(
-              "div",
-              {
-                key: suggestion.name,
-                className:
-                  "flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-700 transition-colors duration-200",
-                onClick: () => handleSelectDomain(suggestion),
-              },
-              React.createElement(
-                "div",
-                { className: "flex items-center" },
-                React.createElement(
-                  "span",
-                  { className: "text-white text-lg mr-2" },
-                  suggestion.name
-                ),
-                React.createElement(
-                  "span",
-                  {
-                    className:
-                      "text-green-400 text-xs px-2 py-0.5 rounded-full bg-green-900/30 border border-green-800",
-                  },
-                  "Available"
-                )
-              ),
-              React.createElement(
-                "span",
-                { className: "text-[#F58327]" },
-                formatPrice(suggestion.price)
-              )
-            )
-          )
-        )
-      );
-    }
+          {/* Show searching message when waiting for results */}
+          {isSearching && (
+            <div className="mt-2 text-gray-400 text-sm flex items-center">
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              Searching for domains...
+            </div>
+          )}
 
-    // Show searching message when waiting for results
-    if (isSearching) {
-      elements.push(
-        React.createElement(
-          "div",
-          {
-            key: "searching-message",
-            className: "mt-2 text-gray-400 text-sm flex items-center",
-          },
-          React.createElement(Loader2, {
-            className: "h-4 w-4 mr-1 animate-spin",
-          }),
-          "Searching for domains..."
-        )
-      );
-    }
-    // No results message
-    else if (
-      searchQuery &&
-      !isSearching &&
-      debouncedSearchQuery.length >= 2 &&
-      suggestions.length === 0 &&
-      !error &&
-      hasSearched
-    ) {
-      elements.push(
-        React.createElement(
-          "div",
-          {
-            key: "no-results",
-            className: "mt-2 text-yellow-500 text-sm flex items-center",
-          },
-          React.createElement(AlertTriangle, { className: "h-4 w-4 mr-1" }),
-          "No domains found under $15 AUD. Try a different search."
-        )
-      );
-    }
-    // Waiting for user to finish typing message
-    else if (
-      searchQuery &&
-      searchQuery.length >= 2 &&
-      !isSearching &&
-      !hasSearched &&
-      !selectedDomain
-    ) {
-      elements.push(
-        React.createElement(
-          "div",
-          {
-            key: "waiting-message",
-            className: "mt-2 text-gray-400 text-sm flex items-center",
-          },
-          "Finish typing to search for domains..."
-        )
-      );
-    }
+          {/* No results message */}
+          {searchQuery &&
+            !isSearching &&
+            debouncedSearchQuery.length >= 2 &&
+            suggestions.length === 0 &&
+            !error &&
+            hasSearched && (
+              <div className="mt-2 text-yellow-500 text-sm flex items-center">
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                No domains found under $15 AUD. Try a different search.
+              </div>
+            )}
 
-    return elements;
-  };
+          {/* Waiting for user to finish typing message */}
+          {searchQuery &&
+            searchQuery.length >= 2 &&
+            !isSearching &&
+            !hasSearched &&
+            !selectedDomain && (
+              <div className="mt-2 text-gray-400 text-sm flex items-center">
+                Finish typing to search for domains...
+              </div>
+            )}
+        </>
+      ) : (
+        // Custom domain input section
+        <div className="relative">
+          <div className="flex items-center">
+            <Globe className="h-5 w-5 text-[#F58327] mr-2" />
+            <input
+              type="text"
+              value={customDomain}
+              onChange={handleCustomDomainChange}
+              placeholder="Enter your existing domain (e.g. yourbusiness.com)"
+              className="w-full bg-transparent text-white text-xl md:text-2xl py-4 pr-10 border-b-2 border-neutral-800 focus:border-[#F58327] focus:outline-none transition-all duration-200 placeholder-neutral-600"
+            />
+            <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+              {customDomain && (
+                <button
+                  onClick={handleClearCustomDomain}
+                  className="p-1 hover:bg-gray-800 rounded-full transition-colors"
+                  aria-label="Clear domain"
+                >
+                  <X className="h-4 w-4 text-gray-400 hover:text-white" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
-  // Render the custom domain input section
-  const renderCustomDomainInput = () => {
-    return React.createElement(
-      "div",
-      { className: "relative" },
-      React.createElement(
-        "div",
-        { className: "flex items-center" },
-        React.createElement(Globe, {
-          className: "h-5 w-5 text-[#F58327] mr-2",
-        }),
-        React.createElement("input", {
-          type: "text",
-          value: customDomain,
-          onChange: handleCustomDomainChange,
-          placeholder: "Enter your existing domain (e.g. yourbusiness.com)",
-          className:
-            "w-full bg-transparent text-white text-xl md:text-2xl py-4 pr-10 border-b-2 border-neutral-800 focus:border-[#F58327] focus:outline-none transition-all duration-200 placeholder-neutral-600",
-        }),
-        React.createElement(
-          "div",
-          { className: "absolute right-0 top-1/2 transform -translate-y-1/2" },
-          customDomain &&
-            React.createElement(
-              "button",
-              {
-                onClick: handleClearCustomDomain,
-                className:
-                  "p-1 hover:bg-gray-800 rounded-full transition-colors",
-                "aria-label": "Clear domain",
-              },
-              React.createElement(X, {
-                className: "h-4 w-4 text-gray-400 hover:text-white",
-              })
-            )
-        )
-      )
-    );
-  };
+      {/* Toggle between search and existing domain input */}
+      <button
+        onClick={toggleCustomDomainInput}
+        className="mt-4 flex items-center text-[#F58327] hover:text-[#e67016] transition-colors text-sm"
+      >
+        {showCustomDomainInput ? (
+          <>
+            <ChevronUp className="h-4 w-4 mr-1" />
+            Search for a new domain instead
+          </>
+        ) : (
+          <>
+            <ChevronDown className="h-4 w-4 mr-1" />
+            Already have a domain? Add it here
+          </>
+        )}
+      </button>
 
-  // Root element
-  return React.createElement(
-    "div",
-    { className: "relative" },
-    // Main content - either search or custom domain input
-    !showCustomDomainInput ? renderSearchInput() : renderCustomDomainInput(),
-
-    // Toggle button
-    React.createElement(
-      "button",
-      {
-        onClick: toggleCustomDomainInput,
-        className:
-          "mt-4 flex items-center text-[#F58327] hover:text-[#e67016] transition-colors text-sm",
-      },
-      showCustomDomainInput
-        ? [
-            React.createElement(ChevronUp, {
-              key: "icon",
-              className: "h-4 w-4 mr-1",
-            }),
-            "Search for a new domain instead",
-          ]
-        : [
-            React.createElement(ChevronDown, {
-              key: "icon",
-              className: "h-4 w-4 mr-1",
-            }),
-            "Already have a domain? Add it here",
-          ]
-    ),
-
-    // Helper text
-    React.createElement(
-      "div",
-      { className: "mt-2 text-xs text-gray-500" },
-      showCustomDomainInput
-        ? "If you don't have a domain and prefer not to use a free one, simply click continue to proceed."
-        : "If you don't have a domain and prefer not to use a free one, simply click continue to proceed."
-    )
+      <div className="mt-2 text-xs text-gray-500">
+        {showCustomDomainInput
+          ? "If you don't have a domain and prefer not to use a free one, simply click continue to proceed."
+          : "If you don't have a domain and prefer not to use a free one, simply click continue to proceed."}
+      </div>
+    </div>
   );
 };
