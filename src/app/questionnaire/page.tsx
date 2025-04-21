@@ -22,7 +22,7 @@ import {
 import { storage } from "@/lib/firebase";
 
 // Import validation functions
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
 
 const validateFileSize = (file: File): boolean => {
   return file.size <= MAX_FILE_SIZE;
@@ -246,32 +246,42 @@ export default function QuestionnairePage() {
   };
 
   // Add custom option to multiselect
+  // Add custom option to multiselect
   const handleAddCustomOption = () => {
     if (!customPageOption.trim()) return;
 
+    // Get current selections (initialize as empty array if undefined)
     const currentSelections = (answers[currentQuestion.id] as string[]) || [];
 
-    // Add to answers
-    setAnswers({
-      ...answers,
-      [currentQuestion.id]: [...currentSelections, customPageOption],
-    });
+    // Check if option already exists in the selections to avoid duplicates
+    if (!currentSelections.includes(customPageOption)) {
+      // Add to answers - make sure to create a new array reference to trigger state updates
+      setAnswers({
+        ...answers,
+        [currentQuestion.id]: [...currentSelections, customPageOption],
+      });
+    }
 
-    // Add to options
+    // Update the questions state to include the new option
     const updatedQuestions = [...questions];
     const questionIndex = updatedQuestions.findIndex(
       (q) => q.id === currentQuestion.id
     );
 
     if (questionIndex !== -1 && updatedQuestions[questionIndex].options) {
-      updatedQuestions[questionIndex] = {
-        ...updatedQuestions[questionIndex],
-        options: [
-          ...(updatedQuestions[questionIndex].options || []),
-          customPageOption,
-        ],
-      };
-      setQuestions(updatedQuestions);
+      // Only add if the option doesn't already exist
+      if (
+        !updatedQuestions[questionIndex].options?.includes(customPageOption)
+      ) {
+        updatedQuestions[questionIndex] = {
+          ...updatedQuestions[questionIndex],
+          options: [
+            ...(updatedQuestions[questionIndex].options || []),
+            customPageOption,
+          ],
+        };
+        setQuestions(updatedQuestions);
+      }
     }
 
     // Clear the input
@@ -479,6 +489,46 @@ export default function QuestionnairePage() {
 
       // Get existing files (if any)
       const existingFiles = (answers[currentQuestion.id] as FileUpload[]) || [];
+
+      // Check file count limit (10 photos)
+      if (
+        currentQuestion.id === "teamPhotos" &&
+        existingFiles.length + files.length > 10
+      ) {
+        setError(
+          `You can upload a maximum of 10 photos. You already have ${existingFiles.length} photos.`
+        );
+        setIsUploading(false);
+        return;
+      }
+
+      // Calculate total size of existing files
+      const existingFilesSize = existingFiles.reduce(
+        (total, file) => total + file.size,
+        0
+      );
+
+      // Calculate size of new files
+      const newFilesSize = Array.from(files).reduce(
+        (total, file) => total + file.size,
+        0
+      );
+
+      // Check total size limit (10MB)
+      const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+      if (
+        currentQuestion.id === "teamPhotos" &&
+        existingFilesSize + newFilesSize > MAX_TOTAL_SIZE
+      ) {
+        setError(
+          `Total size cannot exceed 50MB. Current size: ${formatFileSize(
+            existingFilesSize
+          )}, New files: ${formatFileSize(newFilesSize)}`
+        );
+        setIsUploading(false);
+        return;
+      }
+
       const newFiles: FileUpload[] = [];
       let totalFiles = files.length;
       let completedFiles = 0;
@@ -575,6 +625,13 @@ export default function QuestionnairePage() {
       setIsUploading(false);
       setActiveUploadTask(null);
     }
+  };
+
+  // Helper function to format file size for error messages
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + " bytes";
+    else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    else return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
   const handleRemoveFile = async () => {
@@ -1029,16 +1086,6 @@ export default function QuestionnairePage() {
               <ChevronLeft className="h-5 w-5 mr-2" />
               Previous
             </button>
-
-            {!currentQuestion.required && (
-              <button
-                type="button"
-                onClick={handleSkip}
-                className="cursor-pointer ml-6 text-neutral-500 hover:text-white text-sm underline"
-              >
-                Skip for now
-              </button>
-            )}
           </div>
 
           <button

@@ -124,73 +124,94 @@ export const MultiselectInput = ({
   handleAddCustomOption = () => {},
   customPageOption = "",
   setCustomPageOption = () => {},
-}: QuestionComponentProps) => (
-  <div className="space-y-5 mt-4">
-    {options.map((option, index) => (
-      <motion.div
-        key={option}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 + index * 0.05 }}
-        className="flex items-start"
-      >
-        <div
-          className={`flex items-center justify-center w-6 h-6 mt-1 rounded-sm border-2 cursor-pointer mr-4 transition-colors duration-200 ${
-            ((answers[questionId] as string[]) || []).includes(option)
-              ? "border-[#F58327] bg-black"
-              : "border-neutral-600 bg-black"
-          }`}
-          onClick={() => handleMultiSelectChange(option)}
-        >
-          {((answers[questionId] as string[]) || []).includes(option) && (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#F58327"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4"
-            >
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          )}
-        </div>
-        <label
-          className="text-xl cursor-pointer"
-          onClick={() => handleMultiSelectChange(option)}
-        >
-          {option}
-        </label>
-      </motion.div>
-    ))}
+}: QuestionComponentProps) => {
+  // Create a comprehensive list of options, including those in the answers that might not be in the original options
+  // This ensures custom options that were previously added are shown
+  const currentSelections = (answers[questionId] as string[]) || [];
+  const allOptions = [...new Set([...options, ...currentSelections])];
 
-    {/* Add custom option for website pages */}
-    {questionId === "websitePages" && (
-      <div className="mt-8 pt-4 border-t border-neutral-800">
-        <p className="text-neutral-400 mb-3">Add a custom page type:</p>
-        <div className="flex items-center">
-          <input
-            type="text"
-            value={customPageOption}
-            onChange={(e) => setCustomPageOption(e.target.value)}
-            placeholder="Enter custom page name"
-            className="flex-1 bg-transparent border border-neutral-700 rounded-l-lg px-4 py-2 text-white focus:border-[#F58327] focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={handleAddCustomOption}
-            disabled={!customPageOption.trim()}
-            className="cursor-pointer bg-[#F58327] text-white rounded-r-lg px-4 py-2 disabled:opacity-50"
+  // Function to handle adding custom option and automatically selecting it
+  const handleAddAndSelectCustomOption = () => {
+    if (!customPageOption.trim()) return;
+
+    // First add the custom option
+    handleAddCustomOption();
+
+    // Then, manually select it by calling handleMultiSelectChange
+    // We need to use setTimeout to ensure this happens after the option is added
+    setTimeout(() => {
+      handleMultiSelectChange(customPageOption);
+    }, 0);
+  };
+
+  return (
+    <div className="space-y-5 mt-4">
+      {allOptions.map((option, index) => (
+        <motion.div
+          key={option}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 + index * 0.05 }}
+          className="flex items-start"
+        >
+          <div
+            className={`flex items-center justify-center w-6 h-6 mt-1 rounded-sm border-2 cursor-pointer mr-4 transition-colors duration-200 ${
+              ((answers[questionId] as string[]) || []).includes(option)
+                ? "border-[#F58327] bg-black"
+                : "border-neutral-600 bg-black"
+            }`}
+            onClick={() => handleMultiSelectChange(option)}
           >
-            Add
-          </button>
+            {((answers[questionId] as string[]) || []).includes(option) && (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#F58327"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-4 h-4"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            )}
+          </div>
+          <label
+            className="text-xl cursor-pointer"
+            onClick={() => handleMultiSelectChange(option)}
+          >
+            {option}
+          </label>
+        </motion.div>
+      ))}
+
+      {/* Add custom option for website pages */}
+      {questionId === "websitePages" && (
+        <div className="mt-8 pt-4 border-t border-neutral-800">
+          <p className="text-neutral-400 mb-3">Add a custom page type:</p>
+          <div className="flex items-center">
+            <input
+              type="text"
+              value={customPageOption}
+              onChange={(e) => setCustomPageOption(e.target.value)}
+              placeholder="Enter custom page name"
+              className="flex-1 bg-transparent border border-neutral-700 rounded-l-lg px-4 py-2 text-white focus:border-[#F58327] focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleAddAndSelectCustomOption}
+              disabled={!customPageOption.trim()}
+              className="cursor-pointer bg-[#F58327] text-white rounded-r-lg px-4 py-2 disabled:opacity-50"
+            >
+              Add
+            </button>
+          </div>
         </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
+};
 
 export const ColorInput = ({
   questionId,
@@ -338,6 +359,33 @@ export const FileUploadInput = ({
   acceptedFileTypes = "image/png,image/jpeg",
 }: QuestionComponentProps) => {
   const [dragActive, setDragActive] = useState(false);
+  const [error, setError] = useState("");
+
+  // Calculate total file size for multiple uploads
+  const calculateTotalSize = (files: FileUpload[]): number => {
+    return files.reduce((total, file) => total + file.size, 0);
+  };
+
+  // Check if we've reached the file limit for the "teamPhotos" question
+  const isAtFileLimit = () => {
+    if (questionId === "teamPhotos") {
+      const MAX_FILES = 10;
+      const files = (answers[questionId] as FileUpload[]) || [];
+      return files.length >= MAX_FILES;
+    }
+    return false;
+  };
+
+  // Check if adding new files would exceed size limit
+  const wouldExceedSizeLimit = (newFilesSize: number): boolean => {
+    if (questionId === "teamPhotos") {
+      const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 10MB in bytes
+      const existingFiles = (answers[questionId] as FileUpload[]) || [];
+      const currentTotalSize = calculateTotalSize(existingFiles);
+      return currentTotalSize + newFilesSize > MAX_TOTAL_SIZE;
+    }
+    return false;
+  };
 
   // Handle drag events
   const handleDrag = (e: React.DragEvent) => {
@@ -355,9 +403,32 @@ export const FileUploadInput = ({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
+    setError("");
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       if (fileType === "multiple-images") {
+        // Check if we've reached the file limit
+        const existingFiles = (answers[questionId] as FileUpload[]) || [];
+        const newFileCount = e.dataTransfer.files.length;
+
+        if (existingFiles.length + newFileCount > 10) {
+          setError(
+            `You can upload a maximum of 10 photos. You already have ${existingFiles.length} photos.`
+          );
+          return;
+        }
+
+        // Check total size
+        const newFilesSize = Array.from(e.dataTransfer.files).reduce(
+          (size, file) => size + file.size,
+          0
+        );
+
+        if (wouldExceedSizeLimit(newFilesSize)) {
+          setError("The total size of all photos cannot exceed 50MB.");
+          return;
+        }
+
         handleMultipleFileUpload(e.dataTransfer.files);
       } else if (fileType === "image") {
         handleFileUpload(e.dataTransfer.files[0]);
@@ -368,8 +439,32 @@ export const FileUploadInput = ({
   // Handle file input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
+    setError("");
+
     if (e.target.files && e.target.files.length > 0) {
       if (fileType === "multiple-images") {
+        // Check if we've reached the file limit
+        const existingFiles = (answers[questionId] as FileUpload[]) || [];
+        const newFileCount = e.target.files.length;
+
+        if (existingFiles.length + newFileCount > 10) {
+          setError(
+            `You can upload a maximum of 10 photos. You already have ${existingFiles.length} photos.`
+          );
+          return;
+        }
+
+        // Check total size
+        const newFilesSize = Array.from(e.target.files).reduce(
+          (size, file) => size + file.size,
+          0
+        );
+
+        if (wouldExceedSizeLimit(newFilesSize)) {
+          setError("The total size of all photos cannot exceed 50MB.");
+          return;
+        }
+
         handleMultipleFileUpload(e.target.files);
       } else if (fileType === "image") {
         handleFileUpload(e.target.files[0]);
@@ -497,9 +592,48 @@ export const FileUploadInput = ({
   if (fileType === "multiple-images") {
     const uploadedFiles =
       (answers[questionId] as FileUpload[] | undefined) || [];
+    const totalSize = calculateTotalSize(uploadedFiles);
+    const fileCount = uploadedFiles.length;
 
     return (
       <div className="mt-4 space-y-4">
+        {/* Stats display for team photos */}
+        {questionId === "teamPhotos" && uploadedFiles.length > 0 && (
+          <div className="flex justify-between items-center bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+            <div>
+              <span className="text-sm text-white">
+                {fileCount} of 10 photos uploaded
+              </span>
+              <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                <div
+                  className="bg-[#F58327] h-1.5 rounded-full"
+                  style={{ width: `${(fileCount / 10) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <div>
+              <span className="text-sm text-white">
+                {formatFileSize(totalSize)} of 50MB used
+              </span>
+              <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                <div
+                  className="bg-[#F58327] h-1.5 rounded-full"
+                  style={{
+                    width: `${(totalSize / (50 * 1024 * 1024)) * 100}%`,
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error message display */}
+        {error && (
+          <div className="bg-red-900/30 border border-red-800 p-3 rounded-lg text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {uploadedFiles.map((file, index) => (
             <div key={index} className="bg-neutral-900 p-3 rounded-lg">
@@ -534,61 +668,72 @@ export const FileUploadInput = ({
           ))}
         </div>
 
-        <div
-          className={`border-2 border-dashed ${
-            dragActive ? "border-[#F58327]" : "border-neutral-600"
-          } rounded-lg p-6 text-center transition-colors duration-200`}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-        >
-          {isUploading ? (
-            <div className="py-4 flex flex-col items-center">
-              <Loader2 className="h-8 w-8 text-[#F58327] animate-spin mb-3" />
-              <p className="text-neutral-300 mb-2">Uploading...</p>
-              <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2.5 mb-4 overflow-hidden">
-                <div
-                  className="bg-[#F58327] h-2.5 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
+        {!isAtFileLimit() ? (
+          <div
+            className={`border-2 border-dashed ${
+              dragActive ? "border-[#F58327]" : "border-neutral-600"
+            } rounded-lg p-6 text-center transition-colors duration-200`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+          >
+            {isUploading ? (
+              <div className="py-4 flex flex-col items-center">
+                <Loader2 className="h-8 w-8 text-[#F58327] animate-spin mb-3" />
+                <p className="text-neutral-300 mb-2">Uploading...</p>
+                <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2.5 mb-4 overflow-hidden">
+                  <div
+                    className="bg-[#F58327] h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-neutral-500">
+                  {Math.round(uploadProgress)}%
+                </p>
               </div>
-              <p className="text-xs text-neutral-500">
-                {Math.round(uploadProgress)}%
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="w-14 h-14 bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Upload className="h-6 w-6 text-neutral-400" />
-              </div>
-              <p className="text-neutral-300 mb-2">
-                Drag and drop your files here, or
-              </p>
-              <div className="relative">
-                <input
-                  type="file"
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  onChange={handleChange}
-                  accept={acceptedFileTypes}
-                  multiple={true}
-                />
-                <button
-                  type="button"
-                  className="cursor-pointer px-4 py-2 bg-[#F58327] text-white rounded-lg hover:bg-[#e67016] transition-colors"
-                >
-                  Browse Files
-                </button>
-              </div>
-              <p className="text-xs text-neutral-500 mt-4">
-                Accepted file types: {formatAcceptedTypes(acceptedFileTypes)}
-              </p>
-              <p className="text-xs text-neutral-500 mt-1">
-                Maximum file size: 5MB per file
-              </p>
-            </>
-          )}
-        </div>
+            ) : (
+              <>
+                <div className="w-14 h-14 bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Upload className="h-6 w-6 text-neutral-400" />
+                </div>
+                <p className="text-neutral-300 mb-2">
+                  Drag and drop your files here, or
+                </p>
+                <div className="relative">
+                  <input
+                    type="file"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={handleChange}
+                    accept={acceptedFileTypes}
+                    multiple={true}
+                  />
+                  <button
+                    type="button"
+                    className="cursor-pointer px-4 py-2 bg-[#F58327] text-white rounded-lg hover:bg-[#e67016] transition-colors"
+                  >
+                    Browse Files
+                  </button>
+                </div>
+                <p className="text-xs text-neutral-500 mt-4">
+                  Accepted file types: {formatAcceptedTypes(acceptedFileTypes)}
+                </p>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Maximum: 10 photos (50MB total)
+                </p>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 text-center">
+            <p className="text-gray-300">
+              Maximum number of photos reached (10)
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Remove some photos to upload more
+            </p>
+          </div>
+        )}
       </div>
     );
   }

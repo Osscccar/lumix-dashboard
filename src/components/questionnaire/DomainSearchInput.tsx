@@ -448,9 +448,10 @@ export const DomainSearchInput = ({
       </button>
 
       <div className="mt-2 text-xs text-gray-500">
-        {showCustomDomainInput
-          ? "If you don't have a domain and prefer not to use a free one, simply click continue to proceed."
-          : "If you don't have a domain and prefer not to use a free one, simply click continue to proceed."}
+        If your preferred domain doesn't show,{" "}
+        <a className="underline" href="https://godaddy.com">
+          click here.
+        </a>
       </div>
     </div>
   );

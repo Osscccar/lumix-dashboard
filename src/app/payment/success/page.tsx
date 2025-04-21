@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Script from "next/script"; // Add this import
 import {
   CheckCircle,
   ArrowRight,
@@ -18,6 +19,7 @@ export default function PaymentSuccessPage() {
   const { user, userData, loading } = useFirebase();
   const [countdown, setCountdown] = useState(5);
   const [updating, setUpdating] = useState(true);
+  const [paymentProcessed, setPaymentProcessed] = useState(false);
 
   // Get parameters from URL if available (for compatibility with both methods)
   const sessionId = searchParams.get("session_id");
@@ -37,6 +39,7 @@ export default function PaymentSuccessPage() {
           console.log("Payment status updated successfully");
 
           setUpdating(false);
+          setPaymentProcessed(true); // Set this to trigger the conversion tracking
 
           // Start countdown for redirect
           const timer = setInterval(() => {
@@ -68,6 +71,17 @@ export default function PaymentSuccessPage() {
     }
   }, [user, sessionId, paymentId, router, loading]);
 
+  // Track conversion once payment is processed
+  useEffect(() => {
+    if (paymentProcessed && typeof window !== "undefined" && window.gtag) {
+      // Execute the conversion tracking
+      window.gtag("event", "conversion", {
+        send_to: "AW-17023467754/hmWlCM7tursaEOqBtrU",
+      });
+      console.log("Conversion tracking fired");
+    }
+  }, [paymentProcessed]);
+
   if (loading || updating) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
@@ -96,6 +110,20 @@ export default function PaymentSuccessPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-black to-neutral-900 p-6">
+      {/* Google Ads Conversion Tracking Script */}
+      <Script id="google-conversion-tracking" strategy="afterInteractive">
+        {`
+          function fireConversion() {
+            if (window.gtag) {
+              gtag('event', 'conversion', {'send_to': 'AW-17023467754/hmWlCM7tursaEOqBtrU'});
+              console.log('Google Ads conversion tracked');
+            }
+          }
+          // Fire immediately when this script loads
+          fireConversion();
+        `}
+      </Script>
+
       <motion.div
         className="w-full max-w-md rounded-2xl bg-neutral-900 shadow-xl p-8 border border-neutral-800"
         initial={{ opacity: 0, y: 20 }}
