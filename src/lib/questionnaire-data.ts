@@ -217,12 +217,14 @@ export const questionsData: Question[] = [
     question: "Please upload your favicon (site icon) if you have one",
     required: false,
     fileType: "image",
-    acceptedFileTypes: "image/png,image/x-icon,image/svg+xml",
+    acceptedFileTypes:
+      "image/png,image/x-icon,image/svg+xml, image/jpg, image/jpeg",
   },
   {
     id: "teamPhotos",
     type: "fileUpload",
-    question: "Please upload any team photos you want to include (optional)",
+    question:
+      "Please upload any additional photos you'd like included on the website.",
     required: false,
     fileType: "multiple-images",
     acceptedFileTypes: "image/png,image/jpeg",
@@ -232,7 +234,10 @@ export const questionsData: Question[] = [
     type: "radio",
     question:
       "Would you like us to provide free copywriting, or will you use your own?",
-    options: ["We will write all your copy", "Add your own copy later"],
+    options: [
+      "We will provide personalized copywriting",
+      "Add your own copy later",
+    ],
     required: true,
     validationMessage: "Please answer the question",
   },

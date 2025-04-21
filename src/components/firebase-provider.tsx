@@ -15,13 +15,14 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase"; // Import from centralized file
+import { UserData } from "@/types";
 
 // Firebase context type
 type FirebaseContextType = {
   user: User | null;
-  userData: any | null;
+  userData: UserData | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (email: string, password: string, userData: any) => Promise<User>;
@@ -31,6 +32,7 @@ type FirebaseContextType = {
   verificationEmail?: string;
   sendVerificationCode?: (email: string) => Promise<boolean>;
   verifyCode?: (email: string, code: string) => Promise<boolean>;
+  refreshUserData: () => Promise<void>;
 };
 
 // Create Firebase context
@@ -46,13 +48,13 @@ export const useFirebase = () => {
 };
 
 // Get user data from Firestore
-const getUserData = async (uid: string) => {
+const getUserData = async (uid: string): Promise<UserData | null> => {
   try {
     const docRef = doc(db, "users", uid);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      return docSnap.data();
+      return { id: uid, ...docSnap.data() } as UserData;
     }
     return null;
   } catch (error) {
@@ -64,10 +66,22 @@ const getUserData = async (uid: string) => {
 // Firebase provider component
 export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [userData, setUserData] = useState<any | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isVerified, setIsVerified] = useState<boolean>(false);
   const [verificationEmail, setVerificationEmail] = useState<string>("");
+
+  // Refresh user data from Firestore
+  const refreshUserData = async () => {
+    if (user) {
+      const freshUserData = await getUserData(user.uid);
+      setUserData(freshUserData);
+      console.log(
+        "User data refreshed:",
+        freshUserData ? "Data found" : "No data"
+      );
+    }
+  };
 
   // Sign in function
   const signIn = async (email: string, password: string): Promise<User> => {
@@ -85,8 +99,16 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
       // Check if user document exists
       const userDoc = await getDoc(doc(db, "users", user.uid));
 
-      // If not, create a new document with basic info from Google
-      if (!userDoc.exists()) {
+      if (userDoc.exists()) {
+        // Update last login for existing users
+        await updateDoc(doc(db, "users", user.uid), {
+          lastLogin: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        console.log("Updated existing Google user document");
+      } else {
+        // Create new user document for first-time Google sign-ins
+        console.log("Creating new Google user document");
         const names = user.displayName ? user.displayName.split(" ") : ["", ""];
         const firstName = names[0] || "";
         const lastName = names.slice(1).join(" ") || "";
@@ -100,12 +122,20 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
           subscriptionStatus: "pending",
           completedQuestionnaire: false,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
           emailVerified: true, // Google accounts are already verified
           verifiedAt: new Date().toISOString(),
+          authProvider: "google", // Mark the auth provider
         };
 
         await setDoc(doc(db, "users", user.uid), userDocData);
+        console.log("New Google user document created successfully");
       }
+
+      // Refresh user data
+      const updatedUserData = await getUserData(user.uid);
+      setUserData(updatedUserData);
 
       return user;
     } catch (error) {
@@ -140,6 +170,9 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
         subscriptionStatus: "pending", // Set initial subscription status
         completedQuestionnaire: false,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        authProvider: "email", // Mark the auth provider
       };
 
       // Log the exact data being saved
@@ -224,7 +257,16 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
           "User data from Firestore:",
           data ? "Data found" : "No data found"
         );
-        setUserData(data);
+
+        if (data) {
+          setUserData(data);
+        } else {
+          console.log(
+            "No Firestore document found for authenticated user. This shouldn't happen."
+          );
+          // If somehow we have an authenticated user but no document,
+          // we could create one here as a fallback
+        }
       } else {
         setUserData(null);
       }
@@ -249,6 +291,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
         signUp,
         signInWithGoogle,
         logout,
+        refreshUserData,
       }}
     >
       {children}
