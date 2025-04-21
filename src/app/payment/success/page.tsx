@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Script from "next/script"; // Add this import
+import Script from "next/script";
 import {
   CheckCircle,
   ArrowRight,
@@ -12,6 +12,17 @@ import {
 import { updateUserPaymentStatus } from "@/lib/auth-service";
 import { useFirebase } from "@/components/firebase-provider";
 import { motion } from "framer-motion";
+
+// Add this type declaration for the gtag function
+declare global {
+  interface Window {
+    gtag: (
+      command: string,
+      action: string,
+      params: { send_to: string; [key: string]: any }
+    ) => void;
+  }
+}
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
@@ -113,14 +124,8 @@ export default function PaymentSuccessPage() {
       {/* Google Ads Conversion Tracking Script */}
       <Script id="google-conversion-tracking" strategy="afterInteractive">
         {`
-          function fireConversion() {
-            if (window.gtag) {
-              gtag('event', 'conversion', {'send_to': 'AW-17023467754/hmWlCM7tursaEOqBtrU'});
-              console.log('Google Ads conversion tracked');
-            }
-          }
-          // Fire immediately when this script loads
-          fireConversion();
+          <!-- Event snippet for Subscribe conversion page -->
+          gtag('event', 'conversion', {'send_to': 'AW-17023467754/hmWlCM7tursaEOqBtrU'});
         `}
       </Script>
 
