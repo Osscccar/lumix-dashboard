@@ -2,54 +2,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Environment variables
-const DYNADOT_API_KEY = process.env.DYNADOT_API_KEY;
-const PRICE_LIMIT_AUD = 15; // Maximum price in AUD
-
-// USD to AUD conversion rate - update this periodically if needed
-const USD_TO_AUD_RATE = 1.52;
-
-// Extended list of TLDs to check with Dynadot
-const COMMON_TLDS = [
-  // General TLDs
-  "com",
-  "net",
-  "org",
-  "info",
-  "biz",
-  "name",
-
-  // Country-specific TLDs
-  "co",
-  "us",
-  "ca",
-  "uk",
-  "eu",
-  "de",
-  "nl",
-  "au",
-  "nz",
-
-  // Common affordable new TLDs
-  "xyz",
-  "site",
-  "online",
-  "app",
-  "dev",
-  "shop",
-  "store",
-  "tech",
-  "digital",
-  "live",
-  "blog",
-  "art",
-  "design",
-  "life",
-  "world",
-];
+const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || "";
+const PRICE_LIMIT_AUD = Number(process.env.DOMAIN_PRICE_LIMIT_AUD || 16);
+const USD_TO_AUD_RATE = Number(process.env.USD_TO_AUD_RATE || 1.52);
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get("query");
+
+  console.log(`Domain search request received for: "${query}"`);
 
   if (!query) {
     return NextResponse.json(
@@ -58,35 +19,24 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!DYNADOT_API_KEY) {
-    return NextResponse.json(
-      {
-        error:
-          "Domain search configuration is incomplete. Please set up API credentials.",
-      },
-      { status: 500 }
-    );
-  }
-
   try {
     // Clean the query - remove special characters and convert to lowercase
     const cleanQuery = query.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
+    console.log(`Cleaned query: "${cleanQuery}"`);
 
-    // Generate domain names to check
-    // For very long queries, reduce the number of TLDs to check
-    const tldList =
-      cleanQuery.length > 15 ? COMMON_TLDS.slice(0, 10) : COMMON_TLDS;
-    const domainNames = tldList.map((tld) => `${cleanQuery}.${tld}`);
+    // Step 1: Get domain suggestions
+    const domains = await searchDomains(cleanQuery);
+    console.log(`Found ${domains.length} domain suggestions`);
 
-    // Check domain availability using Dynadot API
-    const availableDomains = await checkDomainsSingularly(domainNames);
+    // Step 2: Check availability
+    const availableDomains = await checkAvailability(domains);
+    console.log(`Found ${availableDomains.length} available domains`);
 
-    // Filter domains that are under the price limit
-    const affordableDomains = availableDomains.filter(
-      (domain) => domain.price <= PRICE_LIMIT_AUD
-    );
+    // Step 3: Format domains with pricing estimates
+    const formattedDomains = formatDomainsWithPricing(availableDomains);
+    console.log(`Returning ${formattedDomains.length} domains with pricing`);
 
-    return NextResponse.json({ domains: affordableDomains });
+    return NextResponse.json({ domains: formattedDomains });
   } catch (error) {
     console.error("Domain search error:", error);
     return NextResponse.json(
@@ -101,81 +51,167 @@ export async function GET(request: NextRequest) {
   }
 }
 
-interface DomainResult {
-  name: string;
-  available: boolean;
-  price: number;
-  currency: string;
+async function searchDomains(query: string): Promise<any[]> {
+  try {
+    // Set default TLDs that are likely to be under our price limit
+    const defaultTlds = "com,net,org,co,xyz,info,site,online,biz";
+
+    // Build the URL with query parameters
+    const url = `https://domainr.p.rapidapi.com/v2/search?query=${encodeURIComponent(
+      query
+    )}&defaults=${defaultTlds}`;
+
+    console.log(`Making Domainr search request to: ${url}`);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-RapidAPI-Key": RAPIDAPI_KEY,
+        "X-RapidAPI-Host": "domainr.p.rapidapi.com",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Domainr API error: ${response.status} - ${errorText.substring(0, 100)}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (!data.results || !Array.isArray(data.results)) {
+      throw new Error(`Invalid Domainr response format`);
+    }
+
+    // Return the domain results
+    return data.results;
+  } catch (error) {
+    console.error("Error searching domains:", error);
+    throw error;
+  }
 }
 
-// Check domains one by one for better reliability
-async function checkDomainsSingularly(
-  domainNames: string[]
-): Promise<DomainResult[]> {
-  const availableDomains: DomainResult[] = [];
+async function checkAvailability(domains: any[]): Promise<any[]> {
+  if (!domains.length) return [];
 
-  for (const domain of domainNames) {
-    try {
-      // Build the API URL for a single domain check
-      const apiUrl = `https://api.dynadot.com/api3.json?key=${
-        DYNADOT_API_KEY || ""
-      }&command=search&domain=${encodeURIComponent(domain)}`;
+  try {
+    // Extract domain names from the results
+    const domainNames = domains.map((result) => result.domain);
 
-      const response = await fetch(apiUrl, {
+    // Process in smaller batches to avoid rate limits
+    const batchSize = 5;
+    const availableDomains = [];
+
+    for (let i = 0; i < domainNames.length; i += batchSize) {
+      const batch = domainNames.slice(i, i + batchSize);
+      const domainsParam = batch.join(",");
+
+      const url = `https://domainr.p.rapidapi.com/v2/status?domain=${encodeURIComponent(
+        domainsParam
+      )}`;
+
+      console.log(`Checking availability for batch of ${batch.length} domains`);
+
+      const response = await fetch(url, {
         method: "GET",
         headers: {
-          Accept: "application/json",
+          "X-RapidAPI-Key": RAPIDAPI_KEY,
+          "X-RapidAPI-Host": "domainr.p.rapidapi.com",
         },
       });
 
       if (!response.ok) {
+        console.error(`Status API error: ${response.status}`);
+        // Continue to the next batch instead of failing
         continue;
       }
 
       const data = await response.json();
 
-      // Check if domain is available based on API response format
-      let isAvailable = false;
-      let price = 9.99; // Default price if not specified
-
-      if (
-        data.SearchResponse?.DomainSearch &&
-        data.SearchResponse.DomainSearch.length > 0
-      ) {
-        const domainInfo = data.SearchResponse.DomainSearch[0];
-        isAvailable = domainInfo.Available === "1";
-
-        if (domainInfo.Price) {
-          price = parseFloat(domainInfo.Price);
-        }
-      } else if (data.search_results) {
-        // Alternative response format
-        const result = data.search_results.find((r: any) => r.name === domain);
-        if (result) {
-          isAvailable = result.available === "yes";
-          price = parseFloat(result.price);
-        }
+      if (!data.status || !Array.isArray(data.status)) {
+        console.error(`Invalid status response format`);
+        continue;
       }
 
-      if (isAvailable) {
-        // Convert price from USD to AUD
-        const priceInAud = Math.round(price * USD_TO_AUD_RATE * 100) / 100;
+      // Find domains that are available
+      data.status.forEach((item) => {
+        // Status codes: 'inactive' or 'undelegated' typically mean the domain is available
+        if (
+          item.domain &&
+          (item.status.includes("inactive") ||
+            item.status.includes("undelegated"))
+        ) {
+          // Find the original domain info
+          const domainInfo = domains.find((d) => d.domain === item.domain);
+          if (domainInfo) {
+            availableDomains.push(domainInfo);
+          }
+        }
+      });
 
-        availableDomains.push({
-          name: domain,
+      // Add delay between batches
+      if (i + batchSize < domainNames.length) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+
+    return availableDomains;
+  } catch (error) {
+    console.error("Error checking availability:", error);
+    throw error;
+  }
+}
+
+// Format domains with estimated pricing
+function formatDomainsWithPricing(domains: any[]): Array<{
+  name: string;
+  available: boolean;
+  price: number;
+  currency: string;
+}> {
+  // TLD pricing estimates in USD (these are approximations)
+  const tldPricing: { [key: string]: number } = {
+    com: 9.99,
+    net: 8.99,
+    org: 9.99,
+    co: 9.99,
+    me: 9.99,
+    io: 29.99, // Typically expensive
+    xyz: 5.99,
+    info: 6.99,
+    site: 7.99,
+    online: 6.99,
+    biz: 7.99,
+    app: 12.99,
+    dev: 12.99,
+    store: 9.99,
+    shop: 9.99,
+  };
+
+  return domains
+    .map((domain) => {
+      const tld = domain.zone;
+      // Estimate price based on TLD, default to 9.99 if unknown
+      const basePrice = tldPricing[tld] || 9.99;
+      // Convert to AUD
+      const priceInAud = Math.round(basePrice * USD_TO_AUD_RATE * 100) / 100;
+
+      // Only include domains under the price limit
+      if (priceInAud <= PRICE_LIMIT_AUD) {
+        return {
+          name: domain.domain,
           available: true,
           price: priceInAud,
           currency: "AUD",
-        });
+        };
       }
-    } catch (error) {
-      // Continue with next domain on error
-      continue;
-    }
-
-    // Add a small delay between API calls
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  }
-
-  return availableDomains;
+      return null;
+    })
+    .filter((domain) => domain !== null) as Array<{
+    name: string;
+    available: boolean;
+    price: number;
+    currency: string;
+  }>;
 }

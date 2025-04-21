@@ -65,6 +65,15 @@ export interface WebsiteEntry {
   url: string;
 }
 
+// Adding domain information type
+export interface DomainInfo {
+  name: string;
+  isCustom: boolean;
+  provider?: string;
+  registrationDate?: string;
+  expiryDate?: string;
+}
+
 // Questionnaire answers can have different types depending on the question
 export interface QuestionnaireAnswers {
   [key: string]:
@@ -73,6 +82,7 @@ export interface QuestionnaireAnswers {
     | WebsiteEntry[]
     | FileUpload
     | FileUpload[]
+    | DomainInfo
     | null
     | undefined;
 
@@ -114,6 +124,8 @@ export interface QuestionnaireAnswers {
 
   // Technical & Admin
   domainName?: string;
+  customDomainName?: string; // For custom domain input
+  domainProvider?: string;
 
   // SEO & Marketing
   seoKeywords?: WebsiteEntry[];

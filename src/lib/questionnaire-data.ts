@@ -38,9 +38,8 @@ export const questionsData: Question[] = [
   {
     id: "customDomainName",
     type: "domainSearch",
-    question:
-      "What custom domain would you like for your website? (Free with your plan)",
-    placeholder: "Search for a domain (e.g., yourbusiness.com)",
+    question: "You're eligible for 1 free domain - select it now.",
+    placeholder: "Search for a domain (e.g: yourbusiness)",
     required: false,
     planCondition: {
       type: "plan",
@@ -229,13 +228,6 @@ export const questionsData: Question[] = [
     acceptedFileTypes: "image/png,image/jpeg",
   },
   {
-    id: "videoContent",
-    type: "text",
-    question: "Do you have video content you want embedded on the site?",
-    placeholder: "Please describe or provide links to videos",
-    required: false,
-  },
-  {
     id: "contentReady",
     type: "radio",
     question:
@@ -243,19 +235,5 @@ export const questionsData: Question[] = [
     options: ["We will write all your copy", "Add your own copy later"],
     required: true,
     validationMessage: "Please answer the question",
-  },
-  {
-    id: "domainName",
-    type: "text",
-    question: "Do you already have a domain name? If so, what is it?",
-    placeholder: "E.g., yourbusiness.com",
-    required: false,
-  },
-  {
-    id: "domainProvider",
-    type: "text",
-    question: "Who is your current domain provider?",
-    placeholder: "E.g., GoDaddy, Namecheap, Google Domains...",
-    required: false,
   },
 ];

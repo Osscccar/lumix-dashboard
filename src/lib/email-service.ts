@@ -126,7 +126,7 @@ export async function sendQuestionnaireReminderEmail(
                 <h1 style="color: #F58327; margin-top: 0; margin-bottom: 20px; font-size: 24px; text-align: center;">
                   ${
                     isFirstReminder
-                      ? "Let's Build Your Website Together"
+                      ? "Complete the Questionnaire"
                       : "Don't Forget Your Website Questionnaire"
                   }
                 </h1>
@@ -147,7 +147,7 @@ export async function sendQuestionnaireReminderEmail(
                     <li style="margin-bottom: 10px;">Helps us understand your business needs and target audience</li>
                     <li style="margin-bottom: 10px;">Captures your design preferences and branding requirements</li>
                     <li style="margin-bottom: 10px;">Ensures we include all the functionality you need</li>
-                    <li style="margin-bottom: 0;">Allows us to start building your website faster</li>
+                    <li style="margin-bottom: 0;">Allows us to start building your website</li>
                   </ul>
                 </div>
                 

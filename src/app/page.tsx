@@ -502,7 +502,7 @@ export default function SignInPage() {
 
   if (loading || (processing && !showVerification) || googleProcessing) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center">
         <motion.div
           className="text-center"
           initial={{ opacity: 0 }}

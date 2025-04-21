@@ -28,6 +28,7 @@ const STRIPE_PAYMENT_LINKS: Record<string, string> = {
 // Features that appear in "Included in all plans"
 const baseFeatures: Feature[] = [
   "Built-for-you website / online store",
+  "Unlimited done-for-you edits",
   "Personalized design & copy",
   "Ready in just 5 days",
   "0% fees on sales or bookings",

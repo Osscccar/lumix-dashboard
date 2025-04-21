@@ -1,6 +1,14 @@
 // src/components/questionnaire/DomainSearchInput.tsx
 import { useState, useEffect, useRef } from "react";
-import { Search, Loader2, Globe, AlertTriangle, X } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  Globe,
+  AlertTriangle,
+  X,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 
 type DomainSearchInputProps = {
@@ -23,7 +31,7 @@ export const DomainSearchInput = ({
   value,
   onChange,
 }: DomainSearchInputProps) => {
-  const [searchQuery, setSearchQuery] = useState(value || "");
+  const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<DomainSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState("");
@@ -35,10 +43,43 @@ export const DomainSearchInput = ({
     null
   );
 
+  // Custom domain state
+  const [showCustomDomainInput, setShowCustomDomainInput] = useState(false);
+  const [customDomain, setCustomDomain] = useState("");
+
+  // Initialize component based on provided value
+  useEffect(() => {
+    if (!value) return;
+
+    if (value.startsWith("customDomain:")) {
+      // This is a custom domain
+      const domainValue = value.replace("customDomain:", "");
+      setCustomDomain(domainValue);
+      setShowCustomDomainInput(true);
+      setSelectedDomain(null);
+      setSearchQuery("");
+    } else {
+      // This is a searched domain
+      setSearchQuery(value);
+      setCustomDomain("");
+      setShowCustomDomainInput(false);
+
+      // Try to find domain in suggestions if they exist
+      const foundDomain = suggestions.find((s) => s.name === value);
+      if (foundDomain) {
+        setSelectedDomain(foundDomain);
+      }
+    }
+  }, []);
+
   // Fetch domain suggestions when search query changes
   useEffect(() => {
     const fetchDomainSuggestions = async () => {
-      if (!debouncedSearchQuery || debouncedSearchQuery.length < 2) {
+      if (
+        !debouncedSearchQuery ||
+        debouncedSearchQuery.length < 2 ||
+        showCustomDomainInput
+      ) {
         setSuggestions([]);
         return;
       }
@@ -81,7 +122,7 @@ export const DomainSearchInput = ({
     };
 
     fetchDomainSuggestions();
-  }, [debouncedSearchQuery, selectedDomain]);
+  }, [debouncedSearchQuery, selectedDomain, showCustomDomainInput]);
 
   // Handle click outside to close suggestions
   useEffect(() => {
@@ -102,20 +143,51 @@ export const DomainSearchInput = ({
     };
   }, []);
 
-  // Handle select domain
+  // Handle selecting a domain from suggestions
   const handleSelectDomain = (domain: DomainSuggestion) => {
     setSearchQuery(domain.name);
-    onChange(domain.name);
+    onChange(domain.name); // Store normal domain directly
     setSelectedDomain(domain);
     setShowSuggestions(false);
   };
 
-  // Clear input and selection
-  const handleClearInput = () => {
+  // Clear domain search input
+  const handleClearSearchInput = () => {
     setSearchQuery("");
     onChange("");
     setSelectedDomain(null);
     inputRef.current?.focus();
+  };
+
+  // Handle custom domain input change
+  const handleCustomDomainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCustomDomain(value);
+    // Store with special prefix to identify it as a custom domain
+    onChange(value ? `customDomain:${value}` : "");
+  };
+
+  // Clear custom domain input
+  const handleClearCustomDomain = () => {
+    setCustomDomain("");
+    onChange("");
+  };
+
+  // Toggle between search and custom domain input
+  const toggleCustomDomainInput = () => {
+    const newState = !showCustomDomainInput;
+    setShowCustomDomainInput(newState);
+
+    if (newState) {
+      // Switching to custom domain input
+      setSelectedDomain(null);
+      setSearchQuery("");
+      onChange(customDomain ? `customDomain:${customDomain}` : "");
+    } else {
+      // Switching to domain search
+      setCustomDomain("");
+      onChange(selectedDomain ? selectedDomain.name : searchQuery);
+    }
   };
 
   // Format price for display
@@ -129,105 +201,154 @@ export const DomainSearchInput = ({
 
   return (
     <div className="relative">
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-          placeholder={
-            placeholder || "Search for a domain (e.g. yourbusiness.com)"
-          }
-          className="w-full bg-transparent text-white text-xl md:text-2xl py-4 pr-10 border-b-2 border-neutral-800 focus:border-[#F58327] focus:outline-none transition-all duration-200 placeholder-neutral-600"
-        />
-        <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center text-neutral-500">
-          {searchQuery && (
-            <button
-              onClick={handleClearInput}
-              className="p-1 mr-1 hover:bg-gray-800 rounded-full transition-colors"
-              aria-label="Clear search"
-            >
-              <X className="h-4 w-4 text-gray-400 hover:text-white" />
-            </button>
-          )}
+      {!showCustomDomainInput ? (
+        // Domain search section
+        <>
+          <div className="relative">
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              placeholder={
+                placeholder || "Search for a domain (e.g. yourbusiness.com)"
+              }
+              className="w-full bg-transparent text-white text-xl md:text-2xl py-4 pr-10 border-b-2 border-neutral-800 focus:border-[#F58327] focus:outline-none transition-all duration-200 placeholder-neutral-600"
+            />
+            <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center text-neutral-500">
+              {searchQuery && (
+                <button
+                  onClick={handleClearSearchInput}
+                  className="p-1 mr-1 hover:bg-gray-800 rounded-full transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4 text-gray-400 hover:text-white" />
+                </button>
+              )}
 
-          {isSearching ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Search className="h-5 w-5" />
-          )}
-        </div>
-      </div>
-
-      {/* Selected domain display */}
-      {selectedDomain && (
-        <div className="mt-3 bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex justify-between items-center">
-          <div className="flex items-center">
-            <Globe className="h-5 w-5 text-[#F58327] mr-2" />
-            <span className="text-white font-medium">
-              {selectedDomain.name}
-            </span>
-            <span className="ml-2 text-green-400 text-xs px-2 py-0.5 rounded-full bg-green-900/30 border border-green-800">
-              Available
-            </span>
+              {isSearching ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Search className="h-5 w-5" />
+              )}
+            </div>
           </div>
-          <span className="text-[#F58327] font-medium">
-            {formatPrice(selectedDomain.price)}
-          </span>
-        </div>
-      )}
 
-      {error && (
-        <div className="mt-2 text-red-500 text-sm flex items-center">
-          <AlertTriangle className="h-4 w-4 mr-1 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Suggestions dropdown */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div
-          ref={suggestionsRef}
-          className="absolute z-10 mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto"
-        >
-          {suggestions.map((suggestion) => (
-            <div
-              key={suggestion.name}
-              className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-700 transition-colors duration-200"
-              onClick={() => handleSelectDomain(suggestion)}
-            >
+          {/* Selected domain display */}
+          {selectedDomain && (
+            <div className="mt-3 bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex justify-between items-center">
               <div className="flex items-center">
-                <span className="text-white text-lg mr-2">
-                  {suggestion.name}
+                <Globe className="h-5 w-5 text-[#F58327] mr-2" />
+                <span className="text-white font-medium">
+                  {selectedDomain.name}
                 </span>
-                <span className="text-green-400 text-xs px-2 py-0.5 rounded-full bg-green-900/30 border border-green-800">
+                <span className="ml-2 text-green-400 text-xs px-2 py-0.5 rounded-full bg-green-900/30 border border-green-800">
                   Available
                 </span>
               </div>
-              <span className="text-[#F58327]">
-                {formatPrice(suggestion.price)}
+              <span className="text-[#F58327] font-medium">
+                {formatPrice(selectedDomain.price)}
               </span>
             </div>
-          ))}
+          )}
+
+          {error && (
+            <div className="mt-2 text-red-500 text-sm flex items-center">
+              <AlertTriangle className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Suggestions dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className="absolute z-10 mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            >
+              {suggestions.map((suggestion) => (
+                <div
+                  key={suggestion.name}
+                  className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-700 transition-colors duration-200"
+                  onClick={() => handleSelectDomain(suggestion)}
+                >
+                  <div className="flex items-center">
+                    <span className="text-white text-lg mr-2">
+                      {suggestion.name}
+                    </span>
+                    <span className="text-green-400 text-xs px-2 py-0.5 rounded-full bg-green-900/30 border border-green-800">
+                      Available
+                    </span>
+                  </div>
+                  <span className="text-[#F58327]">
+                    {formatPrice(suggestion.price)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* No results message */}
+          {searchQuery &&
+            !isSearching &&
+            debouncedSearchQuery.length >= 2 &&
+            suggestions.length === 0 &&
+            !error && (
+              <div className="mt-2 text-yellow-500 text-sm flex items-center">
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                No domains found under $15 AUD. Try a different search.
+              </div>
+            )}
+        </>
+      ) : (
+        // Custom domain input section
+        <div className="relative">
+          <div className="flex items-center">
+            <Globe className="h-5 w-5 text-[#F58327] mr-2" />
+            <input
+              type="text"
+              value={customDomain}
+              onChange={handleCustomDomainChange}
+              placeholder="Enter your existing domain (e.g. yourbusiness.com)"
+              className="w-full bg-transparent text-white text-xl md:text-2xl py-4 pr-10 border-b-2 border-neutral-800 focus:border-[#F58327] focus:outline-none transition-all duration-200 placeholder-neutral-600"
+            />
+            <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+              {customDomain && (
+                <button
+                  onClick={handleClearCustomDomain}
+                  className="p-1 hover:bg-gray-800 rounded-full transition-colors"
+                  aria-label="Clear domain"
+                >
+                  <X className="h-4 w-4 text-gray-400 hover:text-white" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* No results message */}
-      {searchQuery &&
-        !isSearching &&
-        debouncedSearchQuery.length >= 2 &&
-        suggestions.length === 0 &&
-        !error && (
-          <div className="mt-2 text-yellow-500 text-sm flex items-center">
-            <AlertTriangle className="h-4 w-4 mr-1" />
-            No domains found under $15 AUD. Try a different search.
-          </div>
+      {/* Toggle between search and existing domain input */}
+      <button
+        onClick={toggleCustomDomainInput}
+        className="mt-4 flex items-center text-[#F58327] hover:text-[#e67016] transition-colors text-sm"
+      >
+        {showCustomDomainInput ? (
+          <>
+            <ChevronUp className="h-4 w-4 mr-1" />
+            Search for a new domain instead
+          </>
+        ) : (
+          <>
+            <ChevronDown className="h-4 w-4 mr-1" />
+            Already have a domain? Add it here
+          </>
         )}
+      </button>
 
       <div className="mt-2 text-xs text-gray-500">
-        Search for a domain name for your website (included free with your
-        plan).
+        {showCustomDomainInput
+          ? "If you don’t have a domain and prefer not to use a free one, simply click “Continue” to proceed."
+          : "If you don’t have a domain and prefer not to use a free one, simply click “Continue” to proceed."}
       </div>
     </div>
   );
