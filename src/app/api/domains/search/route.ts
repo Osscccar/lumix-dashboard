@@ -6,6 +6,26 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || "";
 const PRICE_LIMIT_AUD = Number(process.env.DOMAIN_PRICE_LIMIT_AUD || 16);
 const USD_TO_AUD_RATE = Number(process.env.USD_TO_AUD_RATE || 1.52);
 
+// Define domain types to improve type safety
+interface DomainSuggestion {
+  domain: string;
+  zone: string;
+  [key: string]: any; // For any other properties
+}
+
+interface DomainStatus {
+  domain: string;
+  status: string;
+  [key: string]: any;
+}
+
+interface DomainWithPricing {
+  name: string;
+  available: boolean;
+  price: number;
+  currency: string;
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get("query");
@@ -51,7 +71,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function searchDomains(query: string): Promise<any[]> {
+async function searchDomains(query: string): Promise<DomainSuggestion[]> {
   try {
     // Set default TLDs that are likely to be under our price limit
     const defaultTlds = "com,net,org,co,xyz,info,site,online,biz";
@@ -85,14 +105,16 @@ async function searchDomains(query: string): Promise<any[]> {
     }
 
     // Return the domain results
-    return data.results;
+    return data.results as DomainSuggestion[];
   } catch (error) {
     console.error("Error searching domains:", error);
     throw error;
   }
 }
 
-async function checkAvailability(domains: any[]): Promise<any[]> {
+async function checkAvailability(
+  domains: DomainSuggestion[]
+): Promise<DomainSuggestion[]> {
   if (!domains.length) return [];
 
   try {
@@ -101,7 +123,7 @@ async function checkAvailability(domains: any[]): Promise<any[]> {
 
     // Process in smaller batches to avoid rate limits
     const batchSize = 5;
-    const availableDomains = [];
+    const availableDomains: DomainSuggestion[] = []; // Fixed: Added type here
 
     for (let i = 0; i < domainNames.length; i += batchSize) {
       const batch = domainNames.slice(i, i + batchSize);
@@ -135,7 +157,7 @@ async function checkAvailability(domains: any[]): Promise<any[]> {
       }
 
       // Find domains that are available
-      data.status.forEach((item) => {
+      data.status.forEach((item: DomainStatus) => {
         // Status codes: 'inactive' or 'undelegated' typically mean the domain is available
         if (
           item.domain &&
@@ -164,12 +186,9 @@ async function checkAvailability(domains: any[]): Promise<any[]> {
 }
 
 // Format domains with estimated pricing
-function formatDomainsWithPricing(domains: any[]): Array<{
-  name: string;
-  available: boolean;
-  price: number;
-  currency: string;
-}> {
+function formatDomainsWithPricing(
+  domains: DomainSuggestion[]
+): DomainWithPricing[] {
   // TLD pricing estimates in USD (these are approximations)
   const tldPricing: { [key: string]: number } = {
     com: 9.99,
@@ -208,10 +227,5 @@ function formatDomainsWithPricing(domains: any[]): Array<{
       }
       return null;
     })
-    .filter((domain) => domain !== null) as Array<{
-    name: string;
-    available: boolean;
-    price: number;
-    currency: string;
-  }>;
+    .filter((domain): domain is DomainWithPricing => domain !== null);
 }
