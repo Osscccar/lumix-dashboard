@@ -102,7 +102,7 @@ export const RadioInput = ({
           onClick={() => handleAnswerChange(option)}
         >
           {answers[questionId] === option && (
-            <div className="w-2 h-2 rounded-full bg-[#F58327]"></div>
+            <div className="w-2 h-2 rounded-full bg-[#F58326]"></div>
           )}
         </div>
         <label
