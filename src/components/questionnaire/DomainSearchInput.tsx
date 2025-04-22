@@ -448,9 +448,9 @@ export const DomainSearchInput = ({
       </button>
 
       <div className="mt-2 text-xs text-gray-500">
-        If your preferred domain doesn't show,{" "}
+        If your preferred domain doesn't show, click here to buy one from{" "}
         <a className="underline" href="https://godaddy.com">
-          click here.
+          Godaddy
         </a>
       </div>
     </div>
