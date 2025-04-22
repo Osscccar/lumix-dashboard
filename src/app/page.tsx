@@ -700,7 +700,7 @@ export default function SignInPage() {
                 transition={{ duration: 0.3 }}
               >
                 {/* Google Sign In Button */}
-                <div className="mb-5">
+                {/* <div className="mb-5">
                   <button
                     onClick={handleGoogleSignIn}
                     className="w-full cursor-pointer flex items-center justify-center bg-white text-gray-800 border border-gray-300 rounded-full px-4 py-3 font-medium hover:bg-gray-50 transition-colors"
@@ -717,6 +717,7 @@ export default function SignInPage() {
                       : "Sign in with Google"}
                   </button>
                 </div>
+                */}
 
                 {/* Divider */}
                 <div className="flex items-center mb-5">
