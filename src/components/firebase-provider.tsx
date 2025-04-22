@@ -139,7 +139,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
 
       return user;
     } catch (error) {
-      console.error("Error during Google sign-in:", error);
+      console.error("Error during Google sign in:", error);
       throw error;
     }
   };
