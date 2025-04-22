@@ -4,6 +4,7 @@ import { FirebaseProvider } from "@/components/firebase-provider";
 import localFont from "next/font/local";
 import { Unbounded } from "next/font/google";
 import Script from "next/script";
+import { GoogleTagManager } from "@next/third-parties/google";
 
 // Load Satoshi as a local font with all weights
 const satoshi = localFont({
@@ -82,22 +83,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${satoshi.variable} ${unbounded.variable}`}>
-        <Script
-          strategy="beforeInteractive"
-          id="google-tag-base"
-          dangerouslySetInnerHTML={{
-            __html: `
-              <!-- Google tag (gtag.js) -->
-              <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17023467754"></script>
-              <script>
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', 'AW-17023467754');
-              </script>
-            `,
-          }}
-        />
+        <GoogleTagManager gtmId="AW-17023467754" />
         <FirebaseProvider>{children}</FirebaseProvider>
       </body>
     </html>
