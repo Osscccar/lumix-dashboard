@@ -41,7 +41,6 @@ export async function createOrUpdateUserFromOAuth(
     if (userDoc.exists()) {
       // User exists, update last login or other fields if needed
       await updateDoc(doc(db, "users", userId), {
-        lastLogin: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
       console.log("Existing OAuth user updated successfully");
@@ -68,7 +67,6 @@ export async function createOrUpdateUserFromOAuth(
       completedQuestionnaire: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
       authProvider: "google", // Mark that this user came from Google OAuth
     };
 

@@ -102,7 +102,6 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
       if (userDoc.exists()) {
         // Update last login for existing users
         await updateDoc(doc(db, "users", user.uid), {
-          lastLogin: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
         console.log("Updated existing Google user document");
@@ -123,7 +122,6 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
           completedQuestionnaire: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
           emailVerified: true, // Google accounts are already verified
           verifiedAt: new Date().toISOString(),
           authProvider: "google", // Mark the auth provider
@@ -171,7 +169,6 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
         completedQuestionnaire: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
         authProvider: "email", // Mark the auth provider
       };
 
