@@ -9,11 +9,9 @@ import { useFirebase } from "@/components/firebase-provider";
 import { motion } from "framer-motion";
 import { GoogleAnalytics } from "@next/third-parties/google";
 
-// TypeScript interface for window with gtag
 declare global {
   interface Window {
-    dataLayer: any[];
-    gtag: (...args: any[]) => void;
+    gtag?: (...args: any[]) => void;
   }
 }
 
@@ -32,13 +30,6 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     // Make sure gtag is available
     if (typeof window !== "undefined" && window.gtag) {
-      // Add event to dataLayer
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({
-        event: "conversion",
-        send_to: "AW-17023467754/hmWlCM7tursaEOqBtrU",
-      });
-
       // Directly call gtag
       window.gtag("event", "conversion", {
         send_to: "AW-17023467754/hmWlCM7tursaEOqBtrU",
