@@ -6,7 +6,6 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFirebase } from "@/components/firebase-provider";
 import { doc, setDoc, getFirestore, getDoc } from "firebase/firestore";
-import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, ShieldCheck, Mail } from "lucide-react";
 import Image, { StaticImageData } from "next/image";
 import lumixlogo from "@/app/public/images/image.png";
