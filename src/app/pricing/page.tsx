@@ -57,7 +57,6 @@ const businessFeatures: Feature[] = [
 ];
 
 const enterpriseFeatures: Feature[] = [
-  "Advanced e-commerce capabilities",
   "Full webstore built for you",
   "Unlimited products",
   "Unlimited edits",

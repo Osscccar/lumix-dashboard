@@ -1647,10 +1647,16 @@ export default function Dashboard() {
 
                 <div className="mt-5">
                   <button
-                    onClick={() => setShowCancelConfirmation(true)}
-                    className="cursor-pointer inline-flex items-center px-4 py-2 text-sm font-medium text-[#F58327] bg-white border border-[#F58327] rounded-lg hover:bg-[#FFF8F3] transition-colors"
+                    onClick={() => handleManageSubscription()}
+                    className="cursor-pointer inline-flex items-center px-4 py-2 mx-1 text-sm font-medium text-[#F58327] bg-white border border-[#F58327] rounded-lg hover:bg-[#FFF8F3] transition-colors"
                   >
                     Manage Subscription
+                  </button>
+                  <button
+                    onClick={() => setShowCancelConfirmation(true)}
+                    className="cursor-pointer inline-flex items-center px-4 py-2 mx-1 text-sm font-medium text-[#d0312d] bg-white border border-[#d0312d] rounded-lg hover:bg-[#FFF8F3] transition-colors"
+                  >
+                    Cancel Subscription
                   </button>
                 </div>
 
