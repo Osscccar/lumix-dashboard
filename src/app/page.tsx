@@ -13,6 +13,7 @@ import launchLogo from "@/app/public/images/launch.png";
 import businessLogo from "@/app/public/images/business.png";
 import enterpriseLogo from "@/app/public/images/enterprise.png";
 import googleLogo from "@/app/public/images/google.svg";
+import { motion } from "framer-motion";
 
 // Define your Stripe payment link
 const STRIPE_PAYMENT_LINK =
