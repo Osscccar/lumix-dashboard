@@ -57,7 +57,7 @@ export default function PlanPage() {
   }, [plan, user, userData, loading, router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black">
+    <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d]">
       <motion.div
         className="text-center"
         initial={{ opacity: 0 }}

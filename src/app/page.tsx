@@ -532,7 +532,7 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d] px-4 py-12 sm:px-6 lg:px-8">
       <motion.div
         className="w-full max-w-md"
         initial={{ opacity: 0, y: 20 }}
@@ -547,7 +547,7 @@ export default function SignInPage() {
         <AnimatePresence>
           {showVerification && (
             <motion.div
-              className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4"
+              className="fixed inset-0 bg-[#0d0d0d] bg-opacity-60 flex items-center justify-center z-50 px-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -679,7 +679,7 @@ export default function SignInPage() {
             <AnimatePresence mode="wait">
               {error && (
                 <motion.div
-                  className="mb-6 px-4 py-3 border-l-4 border-red-500 bg-black"
+                  className="mb-6 px-4 py-3 border-l-4 border-red-500 bg-[#0d0d0d]"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}

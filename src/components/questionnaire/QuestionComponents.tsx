@@ -96,8 +96,8 @@ export const RadioInput = ({
         <div
           className={`flex items-center justify-center w-6 h-6 mt-1 rounded-full border-2 cursor-pointer mr-4 transition-colors duration-200 ${
             answers[questionId] === option
-              ? "border-[#F58327] bg-black"
-              : "border-neutral-600 bg-black"
+              ? "border-[#F58327] bg-[#0d0d0d]"
+              : "border-neutral-600 bg-[#0d0d0d]"
           }`}
           onClick={() => handleAnswerChange(option)}
         >
@@ -157,8 +157,8 @@ export const MultiselectInput = ({
           <div
             className={`flex items-center justify-center w-6 h-6 mt-1 rounded-sm border-2 cursor-pointer mr-4 transition-colors duration-200 ${
               ((answers[questionId] as string[]) || []).includes(option)
-                ? "border-[#F58327] bg-black"
-                : "border-neutral-600 bg-black"
+                ? "border-[#F58327] bg-[#0d0d0d]"
+                : "border-neutral-600 bg-[#0d0d0d]"
             }`}
             onClick={() => handleMultiSelectChange(option)}
           >
@@ -311,7 +311,7 @@ export const WebsiteListInput = ({
                 handleWebsiteListChange(index, "name", e.target.value)
               }
               placeholder="Competitor name or keyword"
-              className="w-full bg-black rounded border border-neutral-800 px-3 py-2 text-white focus:border-[#F58327] focus:outline-none"
+              className="w-full bg-[#0d0d0d] rounded border border-neutral-800 px-3 py-2 text-white focus:border-[#F58327] focus:outline-none"
             />
           </div>
           <div className="flex-1">
@@ -327,7 +327,7 @@ export const WebsiteListInput = ({
                   handleWebsiteListChange(index, "url", e.target.value)
                 }
                 placeholder="www.example.com"
-                className="w-full bg-black border-b border-neutral-800 px-1 py-2 text-white focus:border-[#F58327] focus:outline-none"
+                className="w-full bg-[#0d0d0d] border-b border-neutral-800 px-1 py-2 text-white focus:border-[#F58327] focus:outline-none"
               />
             </div>
           </div>

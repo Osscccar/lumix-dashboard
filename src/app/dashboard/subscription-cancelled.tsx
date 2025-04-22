@@ -73,7 +73,7 @@ export default function SubscriptionCancelledScreen() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black text-white p-6">
+    <div className="min-h-screen flex items-center justify-center bg-[#0d0d0d] text-white p-6">
       <motion.div
         className="max-w-2xl w-full bg-[#0A0A0A] border border-[#222222] rounded-xl p-8 md:p-12"
         initial={{ opacity: 0, y: 20 }}

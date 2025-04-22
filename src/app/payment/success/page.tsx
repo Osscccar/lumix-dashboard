@@ -95,7 +95,7 @@ export default function PaymentSuccessPage() {
 
   if (loading || updating) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d]">
         <motion.div
           className="text-center"
           initial={{ opacity: 0 }}

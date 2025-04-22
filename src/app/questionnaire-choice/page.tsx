@@ -96,7 +96,7 @@ export default function QuestionnaireChoicePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d]">
         <motion.div
           className="text-center"
           initial={{ opacity: 0 }}
@@ -124,7 +124,7 @@ export default function QuestionnaireChoicePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-black px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0d0d0d] px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-3xl">
         <div className="flex justify-center mb-8">
           <Image
@@ -157,7 +157,7 @@ export default function QuestionnaireChoicePage() {
               </div>
 
               {error && (
-                <div className="mb-8 px-6 py-4 border-l-4 border-red-500 bg-black text-red-400 rounded">
+                <div className="mb-8 px-6 py-4 border-l-4 border-red-500 bg-[#0d0d0d] text-red-400 rounded">
                   {error}
                 </div>
               )}
@@ -166,7 +166,7 @@ export default function QuestionnaireChoicePage() {
                 {/* Option 1: Do it now */}
                 <motion.div
                   whileHover={{ scale: 1.03 }}
-                  className="bg-black border border-gray-800 rounded-xl p-8 flex flex-col items-center text-center cursor-pointer"
+                  className="bg-[#0d0d0d] border border-gray-800 rounded-xl p-8 flex flex-col items-center text-center cursor-pointer"
                   onClick={handleDoItNow}
                 >
                   <div className="bg-[#F58327]/20 p-4 rounded-full mb-6">
@@ -187,7 +187,7 @@ export default function QuestionnaireChoicePage() {
                 {/* Option 2: Email me a link */}
                 <motion.div
                   whileHover={{ scale: 1.03 }}
-                  className="bg-black border border-gray-800 rounded-xl p-8 flex flex-col items-center text-center cursor-pointer"
+                  className="bg-[#0d0d0d] border border-gray-800 rounded-xl p-8 flex flex-col items-center text-center cursor-pointer"
                   onClick={handleRemindMeLater}
                 >
                   <div className="bg-[#F58327]/20 p-4 rounded-full mb-6">
@@ -219,7 +219,7 @@ export default function QuestionnaireChoicePage() {
           ) : (
             <motion.div
               key="confirmation"
-              className="bg-black border border-gray-800 rounded-xl p-10"
+              className="bg-[#0d0d0d] border border-gray-800 rounded-xl p-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}

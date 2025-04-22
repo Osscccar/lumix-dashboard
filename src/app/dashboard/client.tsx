@@ -1656,7 +1656,7 @@ export default function Dashboard() {
 
                 {/* Cancellation Confirmation Modal */}
                 {showCancelConfirmation && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                  <div className="fixed inset-0 bg-[#0d0d0d] bg-opacity-50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 animate-in fade-in duration-200">
                       <h3 className="text-lg font-semibold text-[#111827] mb-2">
                         Cancelling your subscription

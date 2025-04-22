@@ -930,7 +930,7 @@ export default function QuestionnairePage() {
 
   if (loading || isVerifyingPayment) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d]">
         <motion.div
           className="text-center"
           initial={{ opacity: 0 }}
@@ -990,9 +990,9 @@ export default function QuestionnairePage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[#0d0d0d] text-white">
       {/* Progress bar at top */}
-      <div className="fixed top-0 left-0 right-0 z-10 bg-black">
+      <div className="fixed top-0 left-0 right-0 z-10 bg-[#0d0d0d]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <span className="text-sm text-neutral-400">
             Question {currentQuestionIndex + 1} of {questions.length}
@@ -1032,7 +1032,7 @@ export default function QuestionnairePage() {
         <AnimatePresence mode="wait">
           {error && (
             <motion.div
-              className="mb-8 px-6 py-4 border-l-4 border-red-500 bg-black"
+              className="mb-8 px-6 py-4 border-l-4 border-red-500 bg-[#0d0d0d]"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}

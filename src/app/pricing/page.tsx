@@ -164,7 +164,7 @@ export default function PricingPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d]">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-[#F58327] mx-auto mb-4" />
           <p className="text-white">Loading...</p>
@@ -174,7 +174,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-black text-white px-4 py-12">
+    <div className="flex flex-col min-h-screen bg-[#0d0d0d] text-white px-4 py-12">
       <div className="max-w-7xl mx-auto w-full">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-white">
@@ -223,7 +223,7 @@ export default function PricingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="relative bg-black border border-gray-800 rounded-xl p-6 flex flex-col h-full overflow-hidden shadow-xl hover:border-[#F58327]/50 transition-all duration-300"
+            className="relative bg-[#0d0d0d] border border-gray-800 rounded-xl p-6 flex flex-col h-full overflow-hidden shadow-xl hover:border-[#F58327]/50 transition-all duration-300"
           >
             {/* Plan Badge */}
             <div className="absolute top-4 right-4">
@@ -321,7 +321,7 @@ export default function PricingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
-            className="relative bg-black border border-gray-800 rounded-xl p-6 flex flex-col h-full overflow-hidden shadow-xl hover:border-[#F58327]/50 transition-all duration-300"
+            className="relative bg-[#0d0d0d] border border-gray-800 rounded-xl p-6 flex flex-col h-full overflow-hidden shadow-xl hover:border-[#F58327]/50 transition-all duration-300"
           >
             {/* Plan Badge */}
             <div className="absolute top-4 right-4">
@@ -421,7 +421,7 @@ export default function PricingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
-            className="relative bg-black border border-gray-800 rounded-xl p-6 flex flex-col h-full overflow-hidden shadow-xl hover:border-[#F58327]/50 transition-all duration-300"
+            className="relative bg-[#0d0d0d] border border-gray-800 rounded-xl p-6 flex flex-col h-full overflow-hidden shadow-xl hover:border-[#F58327]/50 transition-all duration-300"
           >
             {/* Plan Badge */}
             <div className="absolute top-4 right-4">
