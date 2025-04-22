@@ -2,27 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Script from "next/script";
-import {
-  CheckCircle,
-  ArrowRight,
-  CalendarDays,
-  ClipboardList,
-} from "lucide-react";
+import Head from "next/head";
+import { CheckCircle, ArrowRight } from "lucide-react";
 import { updateUserPaymentStatus } from "@/lib/auth-service";
 import { useFirebase } from "@/components/firebase-provider";
 import { motion } from "framer-motion";
-
-// Add this type declaration for the gtag function
-declare global {
-  interface Window {
-    gtag: (
-      command: string,
-      action: string,
-      params: { send_to: string; [key: string]: any }
-    ) => void;
-  }
-}
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
@@ -30,7 +14,6 @@ export default function PaymentSuccessPage() {
   const { user, userData, loading } = useFirebase();
   const [countdown, setCountdown] = useState(5);
   const [updating, setUpdating] = useState(true);
-  const [paymentProcessed, setPaymentProcessed] = useState(false);
 
   // Get parameters from URL if available (for compatibility with both methods)
   const sessionId = searchParams.get("session_id");
@@ -50,7 +33,6 @@ export default function PaymentSuccessPage() {
           console.log("Payment status updated successfully");
 
           setUpdating(false);
-          setPaymentProcessed(true); // Set this to trigger the conversion tracking
 
           // Start countdown for redirect
           const timer = setInterval(() => {
@@ -82,20 +64,24 @@ export default function PaymentSuccessPage() {
     }
   }, [user, sessionId, paymentId, router, loading]);
 
-  // Track conversion once payment is processed
+  // Add Google conversion tracking script directly in the HTML head
   useEffect(() => {
-    if (paymentProcessed && typeof window !== "undefined" && window.gtag) {
-      // Execute the conversion tracking
-      window.gtag("event", "conversion", {
-        send_to: "AW-17023467754/hmWlCM7tursaEOqBtrU",
-      });
-      console.log("Conversion tracking fired");
-    }
-  }, [paymentProcessed]);
+    // Create and inject the Google Ads conversion tracking script
+    const script = document.createElement("script");
+    script.innerHTML = `gtag('event', 'conversion', {'send_to': 'AW-17023467754/hmWlCM7tursaEOqBtrU'});`;
+    document.head.appendChild(script);
+
+    // Clean up on unmount
+    return () => {
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
+  }, []);
 
   if (loading || updating) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d]">
+      <div className="flex min-h-screen items-center justify-center bg-black">
         <motion.div
           className="text-center"
           initial={{ opacity: 0 }}
@@ -120,82 +106,90 @@ export default function PaymentSuccessPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-black to-neutral-900 p-6">
-      {/* Google Ads Conversion Tracking Script */}
-      <Script id="google-conversion-tracking" strategy="afterInteractive">
-        {`
+    <>
+      <Head>
+        {/* This is where we put our meta tags */}
+        <title>Payment Successful | Lumix</title>
+        {/* Inline script for Google Ads conversion tracking */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
           <!-- Event snippet for Subscribe conversion page -->
           gtag('event', 'conversion', {'send_to': 'AW-17023467754/hmWlCM7tursaEOqBtrU'});
-        `}
-      </Script>
+        `,
+          }}
+        />
+      </Head>
 
-      <motion.div
-        className="w-full max-w-md rounded-2xl bg-neutral-900 shadow-xl p-8 border border-neutral-800"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-black to-neutral-900 p-6">
         <motion.div
-          className="mb-8 flex justify-center"
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
+          className="w-full max-w-md rounded-2xl bg-neutral-900 shadow-xl p-8 border border-neutral-800"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
           <motion.div
-            className="rounded-full bg-[#F58327] p-5"
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-            transition={{
-              repeat: Infinity,
-              repeatType: "reverse",
-              duration: 1.5,
-            }}
+            className="mb-8 flex justify-center"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
           >
-            <CheckCircle className="h-16 w-16 text-black" />
+            <motion.div
+              className="rounded-full bg-[#F58327] p-5"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              transition={{
+                repeat: Infinity,
+                repeatType: "reverse",
+                duration: 1.5,
+              }}
+            >
+              <CheckCircle className="h-16 w-16 text-black" />
+            </motion.div>
           </motion.div>
-        </motion.div>
 
-        <h1 className="mb-3 text-center text-3xl font-bold text-white">
-          Payment Successful!
-        </h1>
+          <h1 className="mb-3 text-center text-3xl font-bold text-white">
+            Payment Successful!
+          </h1>
 
-        <div className="text-center">
-          <p className="mb-8 text-neutral-300">
-            Thank you for your payment. We're excited to start building your
-            website!
-          </p>
+          <div className="text-center">
+            <p className="mb-8 text-neutral-300">
+              Thank you for your payment. We're excited to start building your
+              website!
+            </p>
 
-          <div className="flex items-center justify-center mb-6">
-            {[...Array(5)].map((_, i) => (
-              <motion.div
-                key={i}
-                className={`h-2 w-2 mx-1 rounded-full ${
-                  i < countdown ? "bg-[#F58327]" : "bg-neutral-700"
-                }`}
-                initial={{ opacity: 0.7 }}
-                animate={{ opacity: i < countdown ? 1 : 0.5 }}
-                transition={{ duration: 0.3 }}
-              />
-            ))}
+            <div className="flex items-center justify-center mb-6">
+              {[...Array(5)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className={`h-2 w-2 mx-1 rounded-full ${
+                    i < countdown ? "bg-[#F58327]" : "bg-neutral-700"
+                  }`}
+                  initial={{ opacity: 0.7 }}
+                  animate={{ opacity: i < countdown ? 1 : 0.5 }}
+                  transition={{ duration: 0.3 }}
+                />
+              ))}
+            </div>
+
+            <motion.button
+              className="cursor-pointer w-full py-3 px-6 bg-[#F58327] text-black font-bold rounded-lg flex items-center justify-center transition-all hover:bg-[#E47317]"
+              onClick={() => router.push("/questionnaire-choice")}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Continue
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </motion.button>
+
+            <p className="mt-4 text-neutral-500 text-sm">
+              Auto-redirecting in{" "}
+              <span className="font-medium text-[#F58327]">{countdown}</span>{" "}
+              seconds...
+            </p>
           </div>
-
-          <motion.button
-            className="cursor-pointer w-full py-3 px-6 bg-[#F58327] text-black font-bold rounded-lg flex items-center justify-center transition-all hover:bg-[#E47317]"
-            onClick={() => router.push("/questionnaire-choice")}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Continue
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </motion.button>
-
-          <p className="mt-4 text-neutral-500 text-sm">
-            Auto-redirecting in{" "}
-            <span className="font-medium text-[#F58327]">{countdown}</span>{" "}
-            seconds...
-          </p>
-        </div>
-      </motion.div>
-    </div>
+        </motion.div>
+      </div>
+    </>
   );
 }
