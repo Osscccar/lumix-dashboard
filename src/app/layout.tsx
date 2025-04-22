@@ -83,18 +83,18 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${satoshi.variable} ${unbounded.variable}`}>
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=AW-17023467754"
-          strategy="afterInteractive"
-        />
-        <Script
-          id="google-tag-manager"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
+          id="google-tag-base"
           dangerouslySetInnerHTML={{
             __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'AW-17023467754');
+              <!-- Google tag (gtag.js) -->
+              <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17023467754"></script>
+              <script>
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'AW-17023467754');
+              </script>
             `,
           }}
         />
