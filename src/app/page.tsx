@@ -670,8 +670,8 @@ export default function SignInPage() {
                         billingCycle.slice(1)
                       } Plan`
                     : isRegistering
-                    ? "Register to start your website project"
-                    : "Sign in to access your website project dashboard"}
+                    ? "Register to begin the onboarding process"
+                    : "Sign in to access your client dashboard"}
                 </p>
               </div>
             </div>
@@ -719,7 +719,7 @@ export default function SignInPage() {
                 </div>
                 */}
 
-                {/* Divider */}
+                {/* Divider 
                 <div className="flex items-center mb-5">
                   <div className="flex-1 h-px bg-gray-800"></div>
                   <span className="px-3 text-sm text-gray-400">
@@ -727,6 +727,7 @@ export default function SignInPage() {
                   </span>
                   <div className="flex-1 h-px bg-gray-800"></div>
                 </div>
+                */}
 
                 <form className="space-y-6" onSubmit={handleSubmit}>
                   <div className="space-y-4">
