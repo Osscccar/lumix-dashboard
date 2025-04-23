@@ -153,7 +153,7 @@ export default function SubscriptionCancelledScreen() {
         <p className="text-neutral-500 text-sm mt-8 text-center">
           Need help? Contact our support team at{" "}
           <a
-            href="https://lumixdigital.com.au/support"
+            href="https://lumixdigital.com.au/contact"
             className="text-[#F58327] hover:underline"
           >
             support@lumixdigital.com.au
