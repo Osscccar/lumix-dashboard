@@ -5,6 +5,7 @@ import localFont from "next/font/local";
 import { Unbounded } from "next/font/google";
 import Script from "next/script";
 import { GoogleTagManager } from "@next/third-parties/google";
+import { Analytics } from "@vercel/analytics/react";
 
 // Load Satoshi as a local font with all weights
 const satoshi = localFont({
@@ -85,6 +86,7 @@ export default function RootLayout({
       <body className={`${satoshi.variable} ${unbounded.variable}`}>
         <GoogleTagManager gtmId="AW-17023467754" />
         <FirebaseProvider>{children}</FirebaseProvider>
+        <Analytics />
       </body>
     </html>
   );
