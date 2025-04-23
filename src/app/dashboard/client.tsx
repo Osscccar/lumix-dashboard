@@ -422,7 +422,7 @@ export default function Dashboard() {
 
   // Handle support
   const handleSupport = () => {
-    window.location.href = "mailto:sales@lumixdigital.com.au";
+    window.location.href = "https://lumixdigital.com.au/support";
   };
 
   // Handle chat submission
