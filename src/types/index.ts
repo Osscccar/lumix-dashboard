@@ -51,6 +51,7 @@ export interface UserData {
   firstReminderTime?: string;
   secondReminderTime?: string;
   websitePublishedDate?: string; // Date when the website was published (used in analytics)
+  authProvider?: string; // Added authProvider field for OAuth login tracking
 }
 
 export interface FeedbackMessage {

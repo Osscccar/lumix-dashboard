@@ -257,7 +257,7 @@ export default function SignInPage() {
     }
   }, [loading, user, planParam, searchParams]);
 
-  if (loading || (processing && !showVerification) || googleProcessing) {
+  if (loading || processing || googleProcessing) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <motion.div
