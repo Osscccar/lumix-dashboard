@@ -328,9 +328,7 @@ export const DomainSearchInput = ({
                   Available
                 </span>
               </div>
-              <span className="text-[#F58327] font-medium">
-                {formatPrice(selectedDomain.price)}
-              </span>
+              <span className="text-[#F58327] font-medium">FREE</span>
             </div>
           )}
 
@@ -362,9 +360,7 @@ export const DomainSearchInput = ({
                       Available
                     </span>
                   </div>
-                  <span className="text-[#F58327]">
-                    {formatPrice(suggestion.price)}
-                  </span>
+                  <span className="text-[#F58327]">FREE</span>
                 </div>
               ))}
             </div>
