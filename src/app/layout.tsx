@@ -6,6 +6,7 @@ import { Unbounded } from "next/font/google";
 import Script from "next/script";
 import { GoogleTagManager } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Load Satoshi as a local font with all weights
 const satoshi = localFont({
@@ -87,6 +88,7 @@ export default function RootLayout({
         <GoogleTagManager gtmId="AW-17023467754" />
         <FirebaseProvider>{children}</FirebaseProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
