@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { storeVerificationCode } from "@/lib/verification-service";
 import { sendVerificationEmail } from "@/lib/email-service";
 import { verifyCode } from "@/lib/verification-service";
+import {
+  createErrorResponse,
+  ErrorType,
+  createValidationError,
+  generateRequestId,
+} from "@/utils/api-error";
 
 // Simple in-memory rate limiting
 const inMemoryLimiter: Record<string, { count: number; reset: number }> = {};
@@ -37,6 +43,8 @@ async function checkRateLimit(ip: string): Promise<boolean> {
 
 // Send verification code endpoint
 export async function POST(req: NextRequest) {
+  const requestId = generateRequestId();
+
   try {
     // Get client IP for rate limiting (corrected)
     const forwardedFor = req.headers.get("x-forwarded-for") || "";
@@ -45,28 +53,32 @@ export async function POST(req: NextRequest) {
     // Check rate limit
     const withinLimit = await checkRateLimit(ip);
     if (!withinLimit) {
-      return NextResponse.json(
-        { error: "Too many verification attempts. Please try again later." },
-        { status: 429 }
+      return createErrorResponse(
+        "Too many verification attempts",
+        ErrorType.RATE_LIMIT,
+        requestId
       );
     }
 
     // Get email from request body
-    const { email } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { email } = body;
 
     if (!email || typeof email !== "string") {
-      return NextResponse.json(
-        { error: "Valid email address is required" },
-        { status: 400 }
+      return createValidationError(
+        "Valid email address is required",
+        { email: "Email is required and must be a string" },
+        requestId
       );
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: "Please provide a valid email address" },
-        { status: 400 }
+      return createValidationError(
+        "Please provide a valid email address",
+        { email: "Invalid email format" },
+        requestId
       );
     }
 
@@ -77,9 +89,10 @@ export async function POST(req: NextRequest) {
     const emailResult = await sendVerificationEmail(email, verificationCode);
 
     if (!emailResult.success) {
-      return NextResponse.json(
-        { error: "Failed to send verification email" },
-        { status: 500 }
+      return createErrorResponse(
+        emailResult.error || "Failed to send verification email",
+        ErrorType.SERVER_ERROR,
+        requestId
       );
     }
 
@@ -90,23 +103,26 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Error in verification process:", error);
-
-    return NextResponse.json(
-      { error: "An unexpected error occurred" },
-      { status: 500 }
-    );
+    return createErrorResponse(error, ErrorType.SERVER_ERROR, requestId);
   }
 }
 
 // Verify code endpoint
 export async function PUT(req: NextRequest) {
+  const requestId = generateRequestId();
+
   try {
-    const { email, code } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { email, code } = body;
 
     if (!email || !code) {
-      return NextResponse.json(
-        { error: "Email and verification code are required" },
-        { status: 400 }
+      return createValidationError(
+        "Email and verification code are required",
+        {
+          email: !email ? "Email is required" : undefined,
+          code: !code ? "Verification code is required" : undefined,
+        },
+        requestId
       );
     }
 
@@ -114,9 +130,10 @@ export async function PUT(req: NextRequest) {
     const isValid = await verifyCode(email, code);
 
     if (!isValid) {
-      return NextResponse.json(
-        { error: "Invalid or expired verification code" },
-        { status: 400 }
+      return createValidationError(
+        "Invalid or expired verification code",
+        { code: "Invalid or expired verification code" },
+        requestId
       );
     }
 
@@ -128,10 +145,6 @@ export async function PUT(req: NextRequest) {
     });
   } catch (error) {
     console.error("Error verifying code:", error);
-
-    return NextResponse.json(
-      { error: "An error occurred while verifying your code" },
-      { status: 500 }
-    );
+    return createErrorResponse(error, ErrorType.SERVER_ERROR, requestId);
   }
 }

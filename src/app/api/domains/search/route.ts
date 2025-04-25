@@ -1,5 +1,10 @@
 // src/app/api/domains/search/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import {
+  createErrorResponse,
+  ErrorType,
+  generateRequestId,
+} from "@/utils/api-error";
 
 // Environment variables
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || "";
@@ -27,15 +32,18 @@ interface DomainWithPricing {
 }
 
 export async function GET(request: NextRequest) {
+  const requestId = generateRequestId();
+
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get("query");
 
   console.log(`Domain search request received for: "${query}"`);
 
   if (!query) {
-    return NextResponse.json(
-      { error: "Query parameter is required" },
-      { status: 400 }
+    return createErrorResponse(
+      "Missing query parameter",
+      ErrorType.VALIDATION,
+      requestId
     );
   }
 
@@ -59,15 +67,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ domains: formattedDomains });
   } catch (error) {
     console.error("Domain search error:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error, ErrorType.SERVER_ERROR, requestId);
   }
 }
 

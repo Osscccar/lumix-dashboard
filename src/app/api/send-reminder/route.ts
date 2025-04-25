@@ -2,17 +2,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendQuestionnaireReminderEmail } from "@/lib/email-service";
 import { adminDb } from "@/lib/firebase-admin";
+import {
+  createErrorResponse,
+  ErrorType,
+  createValidationError,
+  generateRequestId,
+} from "@/utils/api-error";
 
 export async function POST(req: NextRequest) {
+  const requestId = generateRequestId();
+
   try {
     // Get user data from request
-    const { userId, email } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { userId, email } = body;
 
     if (!userId || !email) {
-      console.error("Missing required fields:", { userId, email });
-      return NextResponse.json(
-        { success: false, error: "Missing required fields" },
-        { status: 400 }
+      return createValidationError(
+        "Missing required fields",
+        {
+          userId: !userId ? "User ID is required" : undefined,
+          email: !email ? "Email is required" : undefined,
+        },
+        requestId
       );
     }
 
@@ -23,9 +35,10 @@ export async function POST(req: NextRequest) {
 
     if (!emailResult.success) {
       console.error("Failed to send reminder email:", emailResult.error);
-      return NextResponse.json(
-        { success: false, error: "Failed to send email" },
-        { status: 500 }
+      return createErrorResponse(
+        emailResult.error || "Failed to send email",
+        ErrorType.SERVER_ERROR,
+        requestId
       );
     }
 
@@ -50,12 +63,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error in reminder API:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
+    return createErrorResponse(
+      error instanceof Error ? error.message : "Unknown error",
+      ErrorType.SERVER_ERROR,
+      requestId
     );
   }
 }

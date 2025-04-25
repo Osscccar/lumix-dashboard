@@ -151,7 +151,7 @@ export async function sendQuestionnaireReminderEmail(
                   </ul>
                 </div>
                 
-                <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">The questionnaire should take only 10-15 minutes to complete, and will greatly help us create a website that meets your expectations.</p>
+                <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">The questionnaire should take only 20-45 minutes to complete, and will greatly help us create a website that meets your expectations.</p>
                 
                 <div style="text-align: center; margin: 35px 0;">
                   <a href="https://app.lumixdigital.com.au/questionnaire" 

@@ -79,6 +79,29 @@ export interface WebsiteEntry {
   url: string;
 }
 
+// For social media links
+export interface SocialMediaLink {
+  platform: string;
+  url: string;
+}
+
+// For team members
+export interface TeamMember {
+  name: string;
+  position: string;
+  description: string;
+  socialMedia?: SocialMediaLink[];
+  image?: FileUpload;
+}
+
+// For services
+export interface Service {
+  name: string;
+  description: string;
+  price?: string;
+  image?: FileUpload;
+}
+
 // Adding domain information type
 export interface DomainInfo {
   name: string;
@@ -94,6 +117,9 @@ export interface QuestionnaireAnswers {
     | string
     | string[]
     | WebsiteEntry[]
+    | SocialMediaLink[]
+    | TeamMember[]
+    | Service[]
     | FileUpload
     | FileUpload[]
     | DomainInfo
@@ -106,7 +132,26 @@ export interface QuestionnaireAnswers {
   businessDescription?: string;
   businessGoals?: string;
   businessUnique?: string;
+  businessStory?: string;
+  businessEmployeeCount?: string;
+  businessCategory?: string;
+
+  // Website Type
+  websiteType?: string;
+
+  // Services and Products
   servicesProducts?: string;
+  services?: Service[];
+
+  // Business Hours
+  wantBusinessHours?: string;
+  businessHours?: string;
+
+  // Team Information
+  wantTeamDisplay?: string;
+  teamMembers?: TeamMember[];
+
+  // Competitors and Market
   competitors?: WebsiteEntry[];
   targetAudience?: string;
   businessProblemSolving?: string;
@@ -117,10 +162,15 @@ export interface QuestionnaireAnswers {
   websiteLikes?: string;
   websiteDislikes?: string;
   currentCms?: string;
+  usingEcommerce?: string;
+  ecommerceUrl?: string;
+  usingBookingPlatform?: string;
+  bookingPlatformUrl?: string;
 
   // Project Goals
   primaryWebsiteGoal?: string;
   desiredVisitorActions?: string[];
+  ctaOptions?: string;
 
   // Website Structure
   websitePages?: string[];
@@ -130,17 +180,27 @@ export interface QuestionnaireAnswers {
   // Design Preferences
   colorPreferences?: string[];
   websiteStyle?: string[];
+  favoriteWebsites?: WebsiteEntry[];
+  heroImageOption?: string;
+  heroImageUpload?: FileUpload;
 
   // Content & Media
   logoUpload?: FileUpload;
+  faviconUpload?: FileUpload;
   teamPhotos?: FileUpload[];
   contentReady?: string;
+  hasSocialMedia?: string;
+  socialMediaLinks?: SocialMediaLink[];
+  hasVideos?: string;
+  videoLinks?: WebsiteEntry[];
 
   // Technical & Admin
+  hasDomain?: string;
   domainName?: string;
+  domainOption?: string;
   customDomainName?: string; // For custom domain input
-  domainProvider?: string;
+  nonPremiumDomainOption?: string;
 
-  // SEO & Marketing
-  seoKeywords?: WebsiteEntry[];
+  // Additional Info
+  additionalInfo?: string;
 }

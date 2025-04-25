@@ -2,9 +2,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { safeCompare } from "@/utils/security";
+import {
+  createErrorResponse,
+  ErrorType,
+  generateRequestId,
+} from "@/utils/api-error";
 
 // This is an admin-only route that updates all existing users with missing subscription status
 export async function GET(req: NextRequest) {
+  const requestId = generateRequestId();
+
   try {
     // Check for admin secret key to prevent unauthorized access
     const { searchParams } = new URL(req.url);
@@ -14,7 +21,11 @@ export async function GET(req: NextRequest) {
       !secretKey ||
       !safeCompare(secretKey, process.env.ADMIN_SECRET_KEY || "")
     ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createErrorResponse(
+        "Invalid or missing secret key",
+        ErrorType.AUTHENTICATION,
+        requestId
+      );
     }
 
     // Get all users from Firestore
@@ -56,6 +67,10 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("Error processing update:", error);
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    return createErrorResponse(
+      "Failed to update subscriptions",
+      ErrorType.SERVER_ERROR,
+      requestId
+    );
   }
 }

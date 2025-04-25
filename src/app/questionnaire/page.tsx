@@ -1,12 +1,20 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  saveQuestionnaireAnswers,
-  savePartialQuestionnaireAnswers,
-  getUserData,
-} from "@/lib/auth-service";
-import type { QuestionnaireAnswers } from "@/types";
+  saveQuestionnaireProgress,
+  saveCompletedQuestionnaire,
+  getQuestionnaireProgress,
+  autoSaveQuestionnaireProgress,
+} from "@/lib/questionnaire-service";
+import { getUserData } from "@/lib/auth-service";
+import type {
+  QuestionnaireAnswers,
+  SocialMediaLink,
+  TeamMember,
+  Service,
+  WebsiteEntry,
+} from "@/types";
 import type { FileUpload } from "@/types";
 import { useFirebase } from "@/components/firebase-provider";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,7 +30,7 @@ import {
 import { storage } from "@/lib/firebase";
 
 // Import validation functions
-const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const validateFileSize = (file: File): boolean => {
   return file.size <= MAX_FILE_SIZE;
@@ -63,6 +71,16 @@ export default function QuestionnairePage() {
   const [activeUploadTask, setActiveUploadTask] = useState<any>(null);
   const userPlanType = userData?.planType?.toLowerCase() || "";
 
+  // Track if component is mounted
+  const isMountedRef = useRef(true);
+
+  // Set mounted state on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Filter questions based on conditional logic
   useEffect(() => {
     // Filter questions based on conditions and plan type
@@ -98,7 +116,40 @@ export default function QuestionnairePage() {
       }
     });
 
-    setQuestions(filteredQuestions);
+    // Sort questions by category to ensure logical grouping
+    const sortedQuestions = [...filteredQuestions].sort((a, b) => {
+      // Define the priority order for categories
+      const categoryOrder = [
+        "basics",
+        "businessType",
+        "domain",
+        "websiteInfo",
+        "businessHours",
+        "designPreferences",
+        "brandAssets",
+        "teamInfo",
+        "serviceInfo",
+        "socialMediaAndMultimedia",
+        "contentStrategy",
+        "additionalInfo",
+      ];
+
+      const aIndex = categoryOrder.indexOf(a.category || "");
+      const bIndex = categoryOrder.indexOf(b.category || "");
+
+      // If both have categories in our order list, sort by that order
+      if (aIndex !== -1 && bIndex !== -1) {
+        return aIndex - bIndex;
+      }
+      // If only one has a category in our order list, prioritize it
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+
+      // Otherwise, maintain original order
+      return 0;
+    });
+
+    setQuestions(sortedQuestions);
   }, [answers, userPlanType]);
 
   // Cleanup active uploads when component unmounts
@@ -116,12 +167,13 @@ export default function QuestionnairePage() {
     };
   }, [activeUploadTask]);
 
-  // First, verify payment status directly from Firestore
+  // Load user data and questionnaire progress
   useEffect(() => {
-    async function verifyPaymentStatus() {
+    async function loadUserQuestionnaireData() {
       if (user) {
         try {
-          console.log("Verifying payment status from Firestore...");
+          console.log("Loading user questionnaire data...");
+          setIsVerifyingPayment(true);
 
           // Get the latest user data directly from Firestore
           const latestUserData = await getUserData(user.uid);
@@ -131,45 +183,43 @@ export default function QuestionnairePage() {
             console.log("User has paid according to Firestore");
             setHasPaid(true);
 
-            // If they already have answers, load them
-            if (latestUserData.questionnaireAnswers) {
-              setAnswers(latestUserData.questionnaireAnswers);
+            // Get questionnaire progress
+            const progress = await getQuestionnaireProgress(user.uid);
 
-              // Find the last answered question to resume from there
-              let lastAnsweredIndex = 0;
-              const questionIds = questionsData.map((q) => q.id);
+            if (progress) {
+              console.log("Found existing questionnaire progress:", progress);
+              // Load saved answers
+              setAnswers(progress.answers);
 
-              for (let i = questionIds.length - 1; i >= 0; i--) {
-                if (
-                  latestUserData.questionnaireAnswers[questionIds[i]] !==
-                  undefined
-                ) {
-                  // Found the last answered question
-                  lastAnsweredIndex = i;
-                  break;
-                }
+              // If there's a saved question index, use it
+              if (
+                progress.currentQuestionIndex !== null &&
+                progress.currentQuestionIndex !== undefined
+              ) {
+                setCurrentQuestionIndex(progress.currentQuestionIndex);
               }
-
-              // Set the current question to the next unanswered one
-              setCurrentQuestionIndex(
-                Math.min(lastAnsweredIndex + 1, questionsData.length - 1)
-              );
+            } else {
+              console.log("No existing questionnaire progress found");
             }
           } else {
             console.log("User has not paid according to Firestore");
           }
         } catch (error) {
-          console.error("Error verifying payment status:", error);
+          console.error("Error loading questionnaire data:", error);
         } finally {
-          setIsVerifyingPayment(false);
+          if (isMountedRef.current) {
+            setIsVerifyingPayment(false);
+          }
         }
       } else if (!loading) {
-        setIsVerifyingPayment(false);
+        if (isMountedRef.current) {
+          setIsVerifyingPayment(false);
+        }
       }
     }
 
     if (!loading) {
-      verifyPaymentStatus();
+      loadUserQuestionnaireData();
     }
   }, [user, loading]);
 
@@ -194,42 +244,48 @@ export default function QuestionnairePage() {
     }
   }, [loading, user, userData, router, isVerifyingPayment, hasPaid]);
 
-  // Auto-save function
+  // Auto-save function with debouncing
   const autoSave = async () => {
     if (!user || Object.keys(answers).length === 0) return;
 
     setAutoSaving(true);
 
     try {
-      await savePartialQuestionnaireAnswers(user.uid, answers);
-      console.log("Auto-saved answers successfully");
+      await autoSaveQuestionnaireProgress(
+        user.uid,
+        answers,
+        currentQuestionIndex
+      );
+      console.log("Auto-saved questionnaire progress");
     } catch (error) {
       console.error("Error auto-saving answers:", error);
     } finally {
-      setAutoSaving(false);
+      if (isMountedRef.current) {
+        setAutoSaving(false);
+      }
     }
   };
 
   // Auto-save whenever answers change
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      if (Object.keys(answers).length > 0) {
+      if (Object.keys(answers).length > 0 && user && !isVerifyingPayment) {
         autoSave();
       }
     }, 2000);
 
     return () => clearTimeout(debounceTimer);
-  }, [answers]);
+  }, [answers, user, isVerifyingPayment]);
 
   // Current question data
   const currentQuestion = questions[currentQuestionIndex] || questionsData[0];
 
   // Handle single answer updates
   const handleAnswerChange = (value: string) => {
-    setAnswers({
-      ...answers,
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
       [currentQuestion.id]: value,
-    });
+    }));
   };
 
   // Handle checkbox/multiselect updates
@@ -239,13 +295,12 @@ export default function QuestionnairePage() {
       ? currentSelections.filter((item: string) => item !== option)
       : [...currentSelections, option];
 
-    setAnswers({
-      ...answers,
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
       [currentQuestion.id]: updatedSelections,
-    });
+    }));
   };
 
-  // Add custom option to multiselect
   // Add custom option to multiselect
   const handleAddCustomOption = () => {
     if (!customPageOption.trim()) return;
@@ -256,10 +311,10 @@ export default function QuestionnairePage() {
     // Check if option already exists in the selections to avoid duplicates
     if (!currentSelections.includes(customPageOption)) {
       // Add to answers - make sure to create a new array reference to trigger state updates
-      setAnswers({
-        ...answers,
+      setAnswers((prevAnswers) => ({
+        ...prevAnswers,
         [currentQuestion.id]: [...currentSelections, customPageOption],
-      });
+      }));
     }
 
     // Update the questions state to include the new option
@@ -295,10 +350,10 @@ export default function QuestionnairePage() {
     ];
     currentColors[index] = color;
 
-    setAnswers({
-      ...answers,
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
       [currentQuestion.id]: currentColors,
-    });
+    }));
   };
 
   // Add new color input
@@ -308,10 +363,10 @@ export default function QuestionnairePage() {
     ];
     currentColors.push("#000000");
 
-    setAnswers({
-      ...answers,
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
       [currentQuestion.id]: currentColors,
-    });
+    }));
   };
 
   // Remove color input
@@ -321,10 +376,10 @@ export default function QuestionnairePage() {
     ];
     currentColors.splice(index, 1);
 
-    setAnswers({
-      ...answers,
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
       [currentQuestion.id]: currentColors,
-    });
+    }));
   };
 
   // Handle website list
@@ -334,8 +389,7 @@ export default function QuestionnairePage() {
     value: string
   ) => {
     const currentList = [
-      ...((answers[currentQuestion.id] as { name: string; url: string }[]) ||
-        []),
+      ...((answers[currentQuestion.id] as WebsiteEntry[]) || []),
     ];
 
     if (!currentList[index]) {
@@ -344,38 +398,269 @@ export default function QuestionnairePage() {
 
     currentList[index][field] = value;
 
-    setAnswers({
-      ...answers,
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
       [currentQuestion.id]: currentList,
-    });
+    }));
   };
 
   // Add new website entry
   const addWebsiteEntry = () => {
     const currentList = [
-      ...((answers[currentQuestion.id] as { name: string; url: string }[]) ||
-        []),
+      ...((answers[currentQuestion.id] as WebsiteEntry[]) || []),
     ];
     currentList.push({ name: "", url: "" });
 
-    setAnswers({
-      ...answers,
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
       [currentQuestion.id]: currentList,
-    });
+    }));
   };
 
   // Remove website entry
   const removeWebsiteEntry = (index: number) => {
     const currentList = [
-      ...((answers[currentQuestion.id] as { name: string; url: string }[]) ||
-        []),
+      ...((answers[currentQuestion.id] as WebsiteEntry[]) || []),
     ];
     currentList.splice(index, 1);
 
-    setAnswers({
-      ...answers,
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
       [currentQuestion.id]: currentList,
+    }));
+  };
+
+  // Handle social media links
+  const handleSocialMediaChange = (
+    index: number,
+    field: "platform" | "url",
+    value: string
+  ) => {
+    const currentLinks = [
+      ...((answers[currentQuestion.id] as SocialMediaLink[]) || []),
+    ];
+
+    if (!currentLinks[index]) {
+      currentLinks[index] = { platform: "", url: "" };
+    }
+
+    currentLinks[index][field] = value;
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentLinks,
+    }));
+  };
+
+  // Add new social media link
+  const addSocialMediaLink = () => {
+    const currentLinks = [
+      ...((answers[currentQuestion.id] as SocialMediaLink[]) || []),
+    ];
+    currentLinks.push({ platform: "", url: "" });
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentLinks,
+    }));
+  };
+
+  // Remove social media link
+  const removeSocialMediaLink = (index: number) => {
+    const currentLinks = [
+      ...((answers[currentQuestion.id] as SocialMediaLink[]) || []),
+    ];
+    currentLinks.splice(index, 1);
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentLinks,
+    }));
+  };
+
+  // Handle team members
+  const handleTeamMemberChange = (
+    index: number,
+    field: string,
+    value: string
+  ) => {
+    const currentTeam = [
+      ...((answers[currentQuestion.id] as TeamMember[]) || []),
+    ];
+
+    if (!currentTeam[index]) {
+      currentTeam[index] = {
+        name: "",
+        position: "",
+        description: "",
+        socialMedia: [],
+      };
+    }
+
+    // Use type assertion to tell TypeScript that this is a valid field
+    (currentTeam[index] as any)[field] = value;
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentTeam,
+    }));
+  };
+
+  // Handle team member social media
+  const handleTeamMemberSocialChange = (
+    teamIndex: number,
+    socialIndex: number,
+    field: "platform" | "url",
+    value: string
+  ) => {
+    const currentTeam = [
+      ...((answers[currentQuestion.id] as TeamMember[]) || []),
+    ];
+
+    if (!currentTeam[teamIndex]) {
+      currentTeam[teamIndex] = {
+        name: "",
+        position: "",
+        description: "",
+        socialMedia: [],
+      };
+    }
+
+    if (!currentTeam[teamIndex].socialMedia) {
+      currentTeam[teamIndex].socialMedia = [];
+    }
+
+    if (!currentTeam[teamIndex].socialMedia![socialIndex]) {
+      currentTeam[teamIndex].socialMedia![socialIndex] = {
+        platform: "",
+        url: "",
+      };
+    }
+
+    currentTeam[teamIndex].socialMedia![socialIndex][field] = value;
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentTeam,
+    }));
+  };
+
+  // Add new team member
+  const addTeamMember = () => {
+    const currentTeam = [
+      ...((answers[currentQuestion.id] as TeamMember[]) || []),
+    ];
+    currentTeam.push({
+      name: "",
+      position: "",
+      description: "",
+      socialMedia: [],
     });
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentTeam,
+    }));
+  };
+
+  // Remove team member
+  const removeTeamMember = (index: number) => {
+    const currentTeam = [
+      ...((answers[currentQuestion.id] as TeamMember[]) || []),
+    ];
+    currentTeam.splice(index, 1);
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentTeam,
+    }));
+  };
+
+  // Add team member social media link
+  const addTeamMemberSocial = (teamIndex: number) => {
+    const currentTeam = [
+      ...((answers[currentQuestion.id] as TeamMember[]) || []),
+    ];
+
+    if (!currentTeam[teamIndex].socialMedia) {
+      currentTeam[teamIndex].socialMedia = [];
+    }
+
+    currentTeam[teamIndex].socialMedia!.push({ platform: "", url: "" });
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentTeam,
+    }));
+  };
+
+  // Remove team member social media link
+  const removeTeamMemberSocial = (teamIndex: number, socialIndex: number) => {
+    const currentTeam = [
+      ...((answers[currentQuestion.id] as TeamMember[]) || []),
+    ];
+
+    if (currentTeam[teamIndex].socialMedia) {
+      currentTeam[teamIndex].socialMedia!.splice(socialIndex, 1);
+    }
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentTeam,
+    }));
+  };
+
+  // Handle services
+  const handleServiceChange = (index: number, field: string, value: string) => {
+    const currentServices = [
+      ...((answers[currentQuestion.id] as Service[]) || []),
+    ];
+
+    if (!currentServices[index]) {
+      currentServices[index] = {
+        name: "",
+        description: "",
+        price: "",
+      };
+    }
+
+    // Use type assertion to tell TypeScript that this is a valid field
+    (currentServices[index] as any)[field] = value;
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentServices,
+    }));
+  };
+
+  // Add new service
+  const addService = () => {
+    const currentServices = [
+      ...((answers[currentQuestion.id] as Service[]) || []),
+    ];
+
+    // Limit to max 3 services
+    if (currentServices.length < 3) {
+      currentServices.push({ name: "", description: "", price: "" });
+
+      setAnswers((prevAnswers) => ({
+        ...prevAnswers,
+        [currentQuestion.id]: currentServices,
+      }));
+    }
+  };
+
+  // Remove service
+  const removeService = (index: number) => {
+    const currentServices = [
+      ...((answers[currentQuestion.id] as Service[]) || []),
+    ];
+    currentServices.splice(index, 1);
+
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [currentQuestion.id]: currentServices,
+    }));
   };
 
   // File upload handlers
@@ -456,18 +741,224 @@ export default function QuestionnairePage() {
             };
 
             // Update answers state
-            setAnswers({
-              ...answers,
+            setAnswers((prevAnswers) => ({
+              ...prevAnswers,
               [currentQuestion.id]: fileUpload,
-            });
+            }));
 
             console.log(`File uploaded successfully: ${fileName}`);
           } catch (error) {
             console.error("Error getting download URL:", error);
             setError("Upload completed but couldn't retrieve file URL.");
           } finally {
-            setIsUploading(false);
-            setActiveUploadTask(null);
+            if (isMountedRef.current) {
+              setIsUploading(false);
+              setActiveUploadTask(null);
+            }
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Error starting upload:", error);
+      setError("Failed to upload file. Please try again.");
+      setIsUploading(false);
+      setActiveUploadTask(null);
+    }
+  };
+
+  const handleTeamMemberImageUpload = async (index: number, file: File) => {
+    if (!user) return;
+
+    try {
+      setIsUploading(true);
+      setError("");
+      setUploadProgress(0);
+
+      // Validate file size
+      if (!validateFileSize(file)) {
+        setError(
+          "File size exceeds the 5MB limit. Please upload a smaller file."
+        );
+        setIsUploading(false);
+        return;
+      }
+
+      // Only allow image files
+      if (!file.type.startsWith("image/")) {
+        setError("Only image files are allowed.");
+        setIsUploading(false);
+        return;
+      }
+
+      // Generate a unique file path in Firebase Storage
+      const fileExt = file.name.split(".").pop();
+      const fileName = `teamMember_${index}_${Date.now()}.${fileExt}`;
+      const filePath = `users/${user.uid}/${fileName}`;
+
+      // Create a reference to the storage location
+      const storageRef = ref(storage, filePath);
+
+      // Create the upload task with progress monitoring
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      // Track this as the active upload task
+      setActiveUploadTask(uploadTask);
+
+      // Set up progress monitoring
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          // Track upload progress
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          // Handle errors
+          console.error("Upload error:", error);
+          setError("Upload failed. Please try again.");
+          setIsUploading(false);
+          setActiveUploadTask(null);
+        },
+        async () => {
+          // Upload completed successfully
+          try {
+            // Get the download URL
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+            // Create the file upload object
+            const fileUpload: FileUpload = {
+              name: file.name,
+              url: downloadURL,
+              type: file.type,
+              size: file.size,
+            };
+
+            // Update the team member's image
+            const currentTeam = [
+              ...((answers[currentQuestion.id] as TeamMember[]) || []),
+            ];
+
+            if (currentTeam[index]) {
+              currentTeam[index].image = fileUpload;
+
+              setAnswers((prevAnswers) => ({
+                ...prevAnswers,
+                [currentQuestion.id]: currentTeam,
+              }));
+            }
+
+            console.log(`Team member image uploaded successfully: ${fileName}`);
+          } catch (error) {
+            console.error("Error getting download URL:", error);
+            setError("Upload completed but couldn't retrieve file URL.");
+          } finally {
+            if (isMountedRef.current) {
+              setIsUploading(false);
+              setActiveUploadTask(null);
+            }
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Error starting upload:", error);
+      setError("Failed to upload file. Please try again.");
+      setIsUploading(false);
+      setActiveUploadTask(null);
+    }
+  };
+
+  const handleServiceImageUpload = async (index: number, file: File) => {
+    if (!user) return;
+
+    try {
+      setIsUploading(true);
+      setError("");
+      setUploadProgress(0);
+
+      // Validate file size
+      if (!validateFileSize(file)) {
+        setError(
+          "File size exceeds the 5MB limit. Please upload a smaller file."
+        );
+        setIsUploading(false);
+        return;
+      }
+
+      // Only allow image files
+      if (!file.type.startsWith("image/")) {
+        setError("Only image files are allowed.");
+        setIsUploading(false);
+        return;
+      }
+
+      // Generate a unique file path in Firebase Storage
+      const fileExt = file.name.split(".").pop();
+      const fileName = `service_${index}_${Date.now()}.${fileExt}`;
+      const filePath = `users/${user.uid}/${fileName}`;
+
+      // Create a reference to the storage location
+      const storageRef = ref(storage, filePath);
+
+      // Create the upload task with progress monitoring
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      // Track this as the active upload task
+      setActiveUploadTask(uploadTask);
+
+      // Set up progress monitoring
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          // Track upload progress
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          // Handle errors
+          console.error("Upload error:", error);
+          setError("Upload failed. Please try again.");
+          setIsUploading(false);
+          setActiveUploadTask(null);
+        },
+        async () => {
+          // Upload completed successfully
+          try {
+            // Get the download URL
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+            // Create the file upload object
+            const fileUpload: FileUpload = {
+              name: file.name,
+              url: downloadURL,
+              type: file.type,
+              size: file.size,
+            };
+
+            // Update the service's image
+            const currentServices = [
+              ...((answers[currentQuestion.id] as Service[]) || []),
+            ];
+
+            if (currentServices[index]) {
+              currentServices[index].image = fileUpload;
+
+              setAnswers((prevAnswers) => ({
+                ...prevAnswers,
+                [currentQuestion.id]: currentServices,
+              }));
+            }
+
+            console.log(`Service image uploaded successfully: ${fileName}`);
+          } catch (error) {
+            console.error("Error getting download URL:", error);
+            setError("Upload completed but couldn't retrieve file URL.");
+          } finally {
+            if (isMountedRef.current) {
+              setIsUploading(false);
+              setActiveUploadTask(null);
+            }
           }
         }
       );
@@ -501,8 +992,7 @@ export default function QuestionnairePage() {
         setIsUploading(false);
         return;
       }
-
-      // Calculate total size of existing files
+      // Calculate size of existing files
       const existingFilesSize = existingFiles.reduce(
         (total, file) => total + file.size,
         0
@@ -514,7 +1004,7 @@ export default function QuestionnairePage() {
         0
       );
 
-      // Check total size limit (10MB)
+      // Check total size limit (50MB)
       const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB in bytes
       if (
         currentQuestion.id === "teamPhotos" &&
@@ -610,10 +1100,10 @@ export default function QuestionnairePage() {
 
       // Update answers state with both existing and new files
       if (newFiles.length > 0) {
-        setAnswers({
-          ...answers,
+        setAnswers((prevAnswers) => ({
+          ...prevAnswers,
           [currentQuestion.id]: [...existingFiles, ...newFiles],
-        });
+        }));
         console.log(`${newFiles.length} files uploaded successfully`);
       } else {
         setError("No files were uploaded successfully.");
@@ -622,12 +1112,14 @@ export default function QuestionnairePage() {
       console.error("Error uploading files:", error);
       setError("Failed to upload files. Please try again.");
     } finally {
-      setIsUploading(false);
-      setActiveUploadTask(null);
+      if (isMountedRef.current) {
+        setIsUploading(false);
+        setActiveUploadTask(null);
+      }
     }
   };
 
-  // Helper function to format file size for error messages
+  // Helper function to format file size for display
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + " bytes";
     else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
@@ -638,7 +1130,7 @@ export default function QuestionnairePage() {
     if (!user) return;
 
     try {
-      const fileUpload = answers[currentQuestion.id] as FileUpload;
+      const fileUpload = answers[currentQuestion.id] as FileUpload | undefined;
 
       if (fileUpload && fileUpload.url) {
         // Extract the file path from the download URL
@@ -648,9 +1140,11 @@ export default function QuestionnairePage() {
         await deleteObject(fileRef);
 
         // Remove from answers
-        const updatedAnswers = { ...answers };
-        delete updatedAnswers[currentQuestion.id];
-        setAnswers(updatedAnswers);
+        setAnswers((prevAnswers) => {
+          const updatedAnswers = { ...prevAnswers };
+          delete updatedAnswers[currentQuestion.id];
+          return updatedAnswers;
+        });
 
         console.log("File deleted successfully");
       }
@@ -677,10 +1171,10 @@ export default function QuestionnairePage() {
         const updatedFiles = [...files];
         updatedFiles.splice(index, 1);
 
-        setAnswers({
-          ...answers,
+        setAnswers((prevAnswers) => ({
+          ...prevAnswers,
           [currentQuestion.id]: updatedFiles,
-        });
+        }));
 
         console.log(`File at index ${index} deleted successfully`);
       }
@@ -774,6 +1268,70 @@ export default function QuestionnairePage() {
         }
         break;
 
+      case "socialMedia":
+        if (!Array.isArray(currentAnswer) || currentAnswer.length === 0) {
+          setError(
+            currentQuestion.validationMessage ||
+              "Please add at least one social media platform before continuing"
+          );
+          return false;
+        }
+
+        // Validate that each social media entry has both platform and URL
+        const socialLinks = currentAnswer as SocialMediaLink[];
+        const invalidSocial = socialLinks.find(
+          (social) => !social.platform || !social.url
+        );
+        if (invalidSocial) {
+          setError(
+            "Please provide both platform and URL for all social media entries"
+          );
+          return false;
+        }
+        break;
+
+      case "teamMembers":
+        if (!Array.isArray(currentAnswer) || currentAnswer.length === 0) {
+          setError(
+            currentQuestion.validationMessage ||
+              "Please add at least one team member before continuing"
+          );
+          return false;
+        }
+
+        // Validate that each team member has required fields
+        const teamMembers = currentAnswer as TeamMember[];
+        const invalidMember = teamMembers.find(
+          (member) => !member.name || !member.position || !member.description
+        );
+        if (invalidMember) {
+          setError(
+            "Please provide name, position, and description for all team members"
+          );
+          return false;
+        }
+        break;
+
+      case "services":
+        if (!Array.isArray(currentAnswer) || currentAnswer.length === 0) {
+          setError(
+            currentQuestion.validationMessage ||
+              "Please add at least one service before continuing"
+          );
+          return false;
+        }
+
+        // Validate that each service has required fields
+        const services = currentAnswer as Service[];
+        const invalidService = services.find(
+          (service) => !service.name || !service.description
+        );
+        if (invalidService) {
+          setError("Please provide name and description for all services");
+          return false;
+        }
+        break;
+
       case "fileUpload":
         // File uploads are optional by default, so we don't validate them
         // unless explicitly required
@@ -791,6 +1349,16 @@ export default function QuestionnairePage() {
             setError("Please upload at least one file before continuing");
             return false;
           }
+        }
+        break;
+
+      case "domainSearch":
+        if (typeof currentAnswer !== "string" || currentAnswer.trim() === "") {
+          setError(
+            currentQuestion.validationMessage ||
+              "Please select a domain before continuing"
+          );
+          return false;
         }
         break;
     }
@@ -828,16 +1396,24 @@ export default function QuestionnairePage() {
   };
 
   // Go to next question
-  const handleNext = () => {
+  const handleNext = async () => {
     // Validate the current answer
     if (!validateCurrentAnswer()) return;
 
     setError("");
     setShowSuccess(true);
 
-    // Save progress
+    // Save progress with the current question index
     if (user) {
-      autoSave();
+      try {
+        await saveQuestionnaireProgress(
+          user.uid,
+          answers,
+          currentQuestionIndex + 1
+        );
+      } catch (error) {
+        console.error("Error saving progress:", error);
+      }
     }
 
     setTimeout(() => {
@@ -851,8 +1427,21 @@ export default function QuestionnairePage() {
   };
 
   // Go to previous question
-  const handlePrevious = () => {
+  const handlePrevious = async () => {
     if (currentQuestionIndex > 0) {
+      // Save progress with the previous question index
+      if (user) {
+        try {
+          await saveQuestionnaireProgress(
+            user.uid,
+            answers,
+            currentQuestionIndex - 1
+          );
+        } catch (error) {
+          console.error("Error saving progress:", error);
+        }
+      }
+
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
@@ -865,7 +1454,8 @@ export default function QuestionnairePage() {
     setError("");
 
     try {
-      const success = await saveQuestionnaireAnswers(user.uid, answers);
+      // Save as completed questionnaire
+      const success = await saveCompletedQuestionnaire(user.uid, answers);
 
       if (success) {
         router.push("/dashboard");
@@ -892,33 +1482,54 @@ export default function QuestionnairePage() {
     if (!question) return;
 
     // If there's no answer for this question yet, initialize based on question type
-    if (!answers[question.id]) {
+    if (answers[question.id] === undefined) {
       switch (question.type) {
         case "color":
-          setAnswers({
-            ...answers,
+          setAnswers((prevAnswers) => ({
+            ...prevAnswers,
             [question.id]: ["#000000"],
-          });
+          }));
           break;
 
         case "websiteList":
-          setAnswers({
-            ...answers,
+          setAnswers((prevAnswers) => ({
+            ...prevAnswers,
             [question.id]: [{ name: "", url: "" }],
-          });
+          }));
+          break;
+
+        case "socialMedia":
+          setAnswers((prevAnswers) => ({
+            ...prevAnswers,
+            [question.id]: [{ platform: "", url: "" }],
+          }));
+          break;
+
+        case "teamMembers":
+          setAnswers((prevAnswers) => ({
+            ...prevAnswers,
+            [question.id]: [],
+          }));
+          break;
+
+        case "services":
+          setAnswers((prevAnswers) => ({
+            ...prevAnswers,
+            [question.id]: [],
+          }));
           break;
 
         case "fileUpload":
           if (question.fileType === "multiple-images") {
-            setAnswers({
-              ...answers,
+            setAnswers((prevAnswers) => ({
+              ...prevAnswers,
               [question.id]: [],
-            });
+            }));
           }
           break;
       }
     }
-  }, [currentQuestionIndex, questions]);
+  }, [currentQuestionIndex, questions, answers]);
 
   // Animation variants for page transitions
   const fadeInUp = {
@@ -966,6 +1577,7 @@ export default function QuestionnairePage() {
     questionId: currentQuestion.id,
     type: currentQuestion.type,
     placeholder: currentQuestion.placeholder,
+    subtext: currentQuestion.subtext,
     options: currentQuestion.options,
     answers,
     handleAnswerChange,
@@ -983,10 +1595,25 @@ export default function QuestionnairePage() {
     handleMultipleFileUpload,
     handleRemoveFile,
     handleRemoveFileAtIndex,
+    handleSocialMediaChange,
+    addSocialMediaLink,
+    removeSocialMediaLink,
+    handleTeamMemberChange,
+    handleTeamMemberSocialChange,
+    handleTeamMemberImageUpload,
+    addTeamMember,
+    removeTeamMember,
+    addTeamMemberSocial,
+    removeTeamMemberSocial,
+    handleServiceChange,
+    handleServiceImageUpload,
+    addService,
+    removeService,
     isUploading,
     uploadProgress,
     fileType: currentQuestion.fileType,
     acceptedFileTypes: currentQuestion.acceptedFileTypes,
+    showUploadInline: currentQuestion.showUploadInline,
   };
 
   return (
@@ -1130,7 +1757,7 @@ export default function QuestionnairePage() {
           </button>
         </div>
       </div>
-      <p className="flex flex-row justify-center text-neutral-500">
+      <p className="flex flex-row justify-center text-neutral-500 pb-8">
         You can leave this page and come back whenever...
       </p>
     </div>

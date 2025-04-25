@@ -53,6 +53,7 @@ export default function SignInPage() {
   const [processing, setProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("Processing...");
   const [googleProcessing, setGoogleProcessing] = useState(false);
+  const [verifyingPaymentStatus, setVerifyingPaymentStatus] = useState(false);
 
   // Check for plan parameter in URL
   const planParam = searchParams.get("plan");
@@ -103,7 +104,7 @@ export default function SignInPage() {
         redirectToStripePayment(user.uid, user.email || "", planParam);
       } else if (latestUserData?.hasPaid) {
         if (!latestUserData.completedQuestionnaire) {
-          router.push("/questionnaire-choice"); // Changed this to questionnaire-choice
+          router.push("/questionnaire");
         } else {
           router.push("/dashboard");
         }
@@ -121,27 +122,58 @@ export default function SignInPage() {
     }
   };
 
-  // Redirect logic based on user state
-  useEffect(() => {
-    if (!loading && user && !processing) {
-      // User is authenticated
-      if (!userData?.hasPaid) {
-        if (planParam) {
-          // If a plan is specified in URL, redirect to Stripe
-          redirectToStripePayment(user.uid, user.email || "", planParam);
+  // Function to check the latest payment status directly from Firestore
+  const checkLatestPaymentStatus = async (userId: string) => {
+    setVerifyingPaymentStatus(true);
+    try {
+      console.log("Checking latest payment status for user:", userId);
+      const db = getFirestore();
+      const userDocRef = doc(db, "users", userId);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const latestUserData = userDoc.data();
+        console.log("Latest user data from Firestore:", latestUserData);
+
+        // Use the latest data from Firestore for redirection
+        if (latestUserData.hasPaid) {
+          if (!latestUserData.completedQuestionnaire) {
+            console.log("Redirecting to questionnaire");
+            router.push("/questionnaire");
+          } else {
+            console.log("Redirecting to dashboard");
+            router.push("/dashboard");
+          }
         } else {
-          // Otherwise direct to pricing page to select a plan
+          console.log("User has not paid, redirecting to pricing");
           router.push("/pricing");
         }
-      } else if (!userData?.completedQuestionnaire) {
-        // User has paid but not completed questionnaire
-        router.push("/questionnaire");
       } else {
-        // User has completed everything, go to dashboard
-        router.push("/dashboard");
+        console.log("User document not found, redirecting to pricing");
+        router.push("/pricing");
+      }
+    } catch (error) {
+      console.error("Error checking payment status:", error);
+      // If there's an error, fall back to pricing page
+      router.push("/pricing");
+    } finally {
+      setVerifyingPaymentStatus(false);
+    }
+  };
+
+  // Redirect logic based on user state
+  useEffect(() => {
+    if (!loading && user && !processing && !verifyingPaymentStatus) {
+      // User is authenticated, check if they're coming to sign in with a plan selection
+      if (planParam) {
+        // If a plan is specified in URL, redirect to Stripe
+        redirectToStripePayment(user.uid, user.email || "", planParam);
+      } else {
+        // Otherwise, check the latest payment status directly from Firestore
+        checkLatestPaymentStatus(user.uid);
       }
     }
-  }, [loading, user, userData, router, processing, planParam]);
+  }, [loading, user, processing, planParam, verifyingPaymentStatus]);
 
   // Check if we should show registration form based on presence of plan parameter
   useEffect(() => {
@@ -228,8 +260,47 @@ export default function SignInPage() {
         setProcessingMessage("Signing in...");
         const userCredential = await signIn(email, password);
 
-        // User is now signed in, redirects will be handled by the useEffect
-        setProcessing(false);
+        if (!userCredential) {
+          throw new Error("Failed to sign in. Please try again.");
+        }
+
+        // Access the user ID from the credential
+        const userId = userCredential.uid;
+
+        // Important: Check the user data directly from Firestore after sign-in
+        const db = getFirestore();
+        const userDocRef = doc(db, "users", userId);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const latestUserData = userDoc.data();
+          console.log(
+            "Sign-in - Latest user data from Firestore:",
+            latestUserData
+          );
+
+          // Direct routing based on latest data
+          if (latestUserData.hasPaid) {
+            if (!latestUserData.completedQuestionnaire) {
+              console.log("Redirecting to questionnaire");
+              router.push("/questionnaire");
+            } else {
+              console.log("Redirecting to dashboard");
+              router.push("/dashboard");
+            }
+          } else {
+            console.log("Redirecting to pricing (no payment)");
+            router.push("/pricing");
+          }
+        } else {
+          console.log("User document not found, redirecting to pricing");
+          router.push("/pricing");
+        }
+
+        // Set processing to false to stop loading state if router doesn't navigate immediately
+        setTimeout(() => {
+          setProcessing(false);
+        }, 1000);
       }
     } catch (error) {
       console.error("Authentication error:", error);
@@ -257,7 +328,7 @@ export default function SignInPage() {
     }
   }, [loading, user, planParam, searchParams]);
 
-  if (loading || processing || googleProcessing) {
+  if (loading || processing || googleProcessing || verifyingPaymentStatus) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <motion.div
@@ -281,7 +352,11 @@ export default function SignInPage() {
             </div>
           </div>
           <p className="text-white text-lg">
-            {googleProcessing ? "Signing in with Google..." : processingMessage}
+            {googleProcessing
+              ? "Signing in with Google..."
+              : verifyingPaymentStatus
+              ? "Checking your account status..."
+              : processingMessage}
           </p>
         </motion.div>
       </div>
@@ -513,10 +588,10 @@ export default function SignInPage() {
               <div className="pt-4">
                 <button
                   type="submit"
-                  disabled={processing}
+                  disabled={processing || verifyingPaymentStatus}
                   className="cursor-pointer relative flex items-center justify-center w-full bg-[#F58327] text-white text-lg rounded-full px-8 py-3 min-h-[54px] disabled:opacity-70 disabled:cursor-not-allowed transition-colors duration-200 hover:bg-[#e67016]"
                 >
-                  {processing ? (
+                  {processing || verifyingPaymentStatus ? (
                     <div className="flex items-center">
                       <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                       Processing...

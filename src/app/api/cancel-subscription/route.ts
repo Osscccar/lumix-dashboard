@@ -2,9 +2,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { safeCompare } from "@/utils/security";
+import {
+  createErrorResponse,
+  ErrorType,
+  generateRequestId,
+} from "@/utils/api-error";
 
 // This endpoint simulates a subscription cancellation directly
 export async function GET(req: NextRequest) {
+  const requestId = generateRequestId();
+
   try {
     const { searchParams } = new URL(req.url);
     const email = searchParams.get("email");
@@ -15,11 +22,19 @@ export async function GET(req: NextRequest) {
       !secretKey ||
       !safeCompare(secretKey, process.env.ADMIN_SECRET_KEY || "")
     ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createErrorResponse(
+        "Invalid or missing secret key",
+        ErrorType.AUTHENTICATION,
+        requestId
+      );
     }
 
     if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+      return createErrorResponse(
+        "Email parameter is required",
+        ErrorType.VALIDATION,
+        requestId
+      );
     }
 
     try {
@@ -31,7 +46,11 @@ export async function GET(req: NextRequest) {
         .get();
 
       if (querySnapshot.empty) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
+        return createErrorResponse(
+          `No user found with email: ${email}`,
+          ErrorType.NOT_FOUND,
+          requestId
+        );
       }
 
       const userDoc = querySnapshot.docs[0];
@@ -48,14 +67,9 @@ export async function GET(req: NextRequest) {
         message: `User ${userId} (${email}) subscription status set to canceled`,
       });
     } catch (dbError) {
-      console.error("Database error:", dbError);
-      return NextResponse.json({ error: "Database error" }, { status: 500 });
+      return createErrorResponse(dbError, ErrorType.SERVER_ERROR, requestId);
     }
   } catch (error) {
-    console.error("Error processing cancellation:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return createErrorResponse(error, ErrorType.SERVER_ERROR, requestId);
   }
 }

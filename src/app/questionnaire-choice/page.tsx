@@ -176,7 +176,7 @@ export default function QuestionnaireChoicePage() {
                     Complete Questionnaire Now
                   </h3>
                   <p className="text-gray-400 mb-6">
-                    Take 10-15 minutes to tell us about your business and
+                    Take 20-45 minutes to tell us about your business and
                     website needs. This helps us start building right away.
                   </p>
                   <button className="cursor-pointer mt-auto bg-[#F58327] text-white rounded-full px-6 py-3 font-medium hover:bg-[#e67016] transition-colors">

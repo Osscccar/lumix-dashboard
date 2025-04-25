@@ -1,8 +1,128 @@
-// src/middleware.ts
+// src/middleware.ts (updated with proper types)
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { Redis } from "@upstash/redis";
 
-export function middleware(request: NextRequest) {
+const redis =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      })
+    : null;
+
+// Rate limit configurations
+const RATE_LIMIT_CONFIG = {
+  auth: { limit: 5, window: 60 * 5 },
+  default: { limit: 20, window: 60 },
+  file: { limit: 10, window: 60 },
+};
+
+// Define a proper return type for the rate limit function
+type RateLimitResult = NextResponse | { headers: Headers } | null;
+
+// Rate limiting function
+async function applyRateLimit(
+  req: NextRequest,
+  type: "auth" | "file" | "default" = "default"
+): Promise<RateLimitResult> {
+  // If Redis is not configured, skip rate limiting
+  if (!redis) {
+    console.warn("Redis is not configured. Rate limiting is disabled.");
+    return null;
+  }
+
+  // Get client IP
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0] ||
+    req.headers.get("x-real-ip") ||
+    "127.0.0.1";
+
+  // Get URI path
+  const path = req.nextUrl.pathname;
+
+  // Create a unique key for this IP and endpoint type
+  const key = `rate-limit:${ip}:${type}:${path}`;
+
+  const config = RATE_LIMIT_CONFIG[type];
+
+  try {
+    // Get current count for this IP and increment
+    const currentCount = await redis.incr(key);
+
+    // If this is the first request, set expiry
+    if (currentCount === 1) {
+      await redis.expire(key, config.window);
+    }
+
+    // Get remaining TTL for this key
+    const ttl = await redis.ttl(key);
+
+    // Add rate limit headers
+    const headers = new Headers();
+    headers.set("X-RateLimit-Limit", config.limit.toString());
+    headers.set(
+      "X-RateLimit-Remaining",
+      Math.max(0, config.limit - currentCount).toString()
+    );
+    headers.set("X-RateLimit-Reset", ttl.toString());
+
+    // If rate limit exceeded
+    if (currentCount > config.limit) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Rate limit exceeded. Please try again later.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": ttl.toString(),
+            "X-RateLimit-Limit": config.limit.toString(),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": ttl.toString(),
+          },
+        }
+      );
+    }
+
+    return { headers };
+  } catch (error) {
+    console.error("Rate limiting error:", error);
+    // If an error occurs, allow the request (fail open)
+    return null;
+  }
+}
+
+export async function middleware(request: NextRequest) {
+  // Apply rate limiting based on endpoint type
+  let rateLimitResult: RateLimitResult = null;
+
+  // Apply rate limiting for authentication-related endpoints
+  if (
+    request.nextUrl.pathname.includes("/api/send-verification") ||
+    request.nextUrl.pathname.includes("/api/webhook")
+  ) {
+    rateLimitResult = await applyRateLimit(request, "auth");
+  }
+  // Apply rate limiting for file uploads
+  else if (
+    request.method === "POST" &&
+    (request.nextUrl.pathname.includes("/api/upload") ||
+      request.nextUrl.pathname.includes("/api/file"))
+  ) {
+    rateLimitResult = await applyRateLimit(request, "file");
+  }
+  // Apply default rate limiting for all other API endpoints
+  else if (request.nextUrl.pathname.startsWith("/api/")) {
+    rateLimitResult = await applyRateLimit(request, "default");
+  }
+
+  // If rate limit response was generated, return it
+  if (rateLimitResult && rateLimitResult instanceof NextResponse) {
+    return rateLimitResult;
+  }
+
   // Get response
   const response = NextResponse.next();
 
@@ -13,12 +133,11 @@ export function middleware(request: NextRequest) {
   response.headers.set(
     "Content-Security-Policy",
     "default-src 'self'; " +
-      // Add unsafe-eval for development mode
       `script-src 'self' 'unsafe-inline' ${
         isDev ? "'unsafe-eval'" : ""
-      } https://cdnjs.cloudflare.com https://js.stripe.com https://apis.google.com https://*.googleapis.com; ` +
+      } https://cdnjs.cloudflare.com https://js.stripe.com https://apis.google.com https://*.googleapis.com https://www.googletagmanager.com https://*.vercel-scripts.com https://*.vercel-insights.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com https://googleads.g.doubleclick.net; ` +
       "style-src 'self' 'unsafe-inline'; " +
-      "img-src 'self' data: blob: https://media.discordapp.net https://www.google.com https://sitechecker.pro https://*.googleapis.com https://*.stripe.com; " +
+      "img-src 'self' data: blob: https://media.discordapp.net https://www.google.com https://sitechecker.pro https://*.googleapis.com https://*.stripe.com https://*.vercel-insights.com https://*.google-analytics.com https://*.doubleclick.net https://*.googleadservices.com; " +
       "font-src 'self'; " +
       "connect-src 'self' " +
       "https://*.firebaseio.com " +
@@ -30,11 +149,19 @@ export function middleware(request: NextRequest) {
       "wss://*.firebaseio.com " +
       "https://*.cloudfunctions.net " +
       "https://api.stripe.com " +
+      "https://*.vercel-insights.com " +
+      "https://*.vercel-analytics.com " +
+      "https://*.vercel-scripts.com " +
+      "https://*.google-analytics.com " +
+      "https://va.vercel-scripts.com " +
+      "https://*.doubleclick.net " +
+      "https://stats.g.doubleclick.net " +
+      "https://*.googleadservices.com " +
       // Add localhost connections for development
       (isDev ? "localhost:* ws://localhost:* " : "") +
       "; " +
-      // Add Google APIs to frame-src
-      "frame-src 'self' https://*.firebaseapp.com https://js.stripe.com https://hooks.stripe.com https://apis.google.com; " +
+      // Updated frame-src to include doubleclick.net
+      "frame-src 'self' https://*.firebaseapp.com https://js.stripe.com https://hooks.stripe.com https://apis.google.com https://www.googletagmanager.com https://*.doubleclick.net https://td.doubleclick.net https://bid.g.doubleclick.net; " +
       "object-src 'none'; " +
       "base-uri 'self';"
   );
@@ -51,22 +178,23 @@ export function middleware(request: NextRequest) {
   // Set referrer policy
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
-  // HSTS (uncomment if you're using HTTPS)
-  // response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  // HSTS
+  response.headers.set(
+    "Strict-Transport-Security",
+    "max-age=31536000; includeSubDomains; preload"
+  );
+
+  // Add rate limit headers if available
+  if (rateLimitResult && "headers" in rateLimitResult) {
+    for (const [key, value] of rateLimitResult.headers.entries()) {
+      response.headers.set(key, value);
+    }
+  }
 
   return response;
 }
 
-// Only run middleware on relevant paths (exclude static files)
+// Keep your existing matcher config
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
