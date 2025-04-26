@@ -1,4 +1,4 @@
-// src/middleware.ts (updated with proper types)
+// src/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { Redis } from "@upstash/redis";
@@ -16,6 +16,7 @@ const RATE_LIMIT_CONFIG = {
   auth: { limit: 5, window: 60 * 5 },
   default: { limit: 20, window: 60 },
   file: { limit: 10, window: 60 },
+  tenweb: { limit: 10, window: 60 * 60 }, // Stricter rate limit for 10web API (2 requests per hour)
 };
 
 // Define a proper return type for the rate limit function
@@ -24,7 +25,7 @@ type RateLimitResult = NextResponse | { headers: Headers } | null;
 // Rate limiting function
 async function applyRateLimit(
   req: NextRequest,
-  type: "auth" | "file" | "default" = "default"
+  type: "auth" | "file" | "default" | "tenweb" = "default"
 ): Promise<RateLimitResult> {
   // If Redis is not configured, skip rate limiting
   if (!redis) {
@@ -113,6 +114,10 @@ export async function middleware(request: NextRequest) {
   ) {
     rateLimitResult = await applyRateLimit(request, "file");
   }
+  // Apply stricter rate limiting for 10web website generation
+  else if (request.nextUrl.pathname.includes("/api/generate-website")) {
+    rateLimitResult = await applyRateLimit(request, "tenweb");
+  }
   // Apply default rate limiting for all other API endpoints
   else if (request.nextUrl.pathname.startsWith("/api/")) {
     rateLimitResult = await applyRateLimit(request, "default");
@@ -157,6 +162,7 @@ export async function middleware(request: NextRequest) {
       "https://*.doubleclick.net " +
       "https://stats.g.doubleclick.net " +
       "https://*.googleadservices.com " +
+      "https://api.10web.io " + // Added 10web API domain
       // Add localhost connections for development
       (isDev ? "localhost:* ws://localhost:* " : "") +
       "; " +

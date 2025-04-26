@@ -72,12 +72,43 @@ export async function saveCompletedQuestionnaire(
     });
 
     console.log("Questionnaire completed and saved successfully");
+
+    // After successful questionnaire completion, trigger the website generation
+    // This happens in the background without blocking the main flow
+    triggerWebsiteGeneration(userId, answers);
+
     return true;
   } catch (error) {
     console.error("Error saving completed questionnaire:", error);
     return false;
   }
 }
+
+/**
+ * Triggers the website generation process in the background
+ * This runs asynchronously and doesn't block the main flow
+ * @param userId User ID
+ * @param answers Questionnaire answers
+ */
+const triggerWebsiteGeneration = (
+  userId: string,
+  answers: Record<string, any>
+) => {
+  // Don't await this - we want it to run in the background
+  fetch("/api/generate-website", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      userId,
+      questionnaireAnswers: answers,
+    }),
+  }).catch((error) => {
+    // We catch errors here but don't throw them to avoid breaking the main flow
+    console.error("Background website generation error:", error);
+  });
+};
 
 /**
  * Get questionnaire progress for a user

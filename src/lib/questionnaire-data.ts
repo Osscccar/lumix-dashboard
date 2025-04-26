@@ -30,7 +30,7 @@ export interface Question {
   validationMessage?: string;
   validateFn?: (value: any) => boolean;
   condition?: {
-    questionId: string;
+    questionId: string | string[];
     expectedAnswer: string | string[];
   };
   planCondition?: PlanCondition; // Property for plan-specific conditions
@@ -202,7 +202,7 @@ export const questionsData: Question[] = [
     category: "businessType",
   },
 
-  // --- DOMAIN INFORMATION ---
+  // --- DOMAIN INFORMATION --- (UPDATED SECTION)
   {
     id: "hasDomain",
     type: "radio",
@@ -232,15 +232,45 @@ export const questionsData: Question[] = [
     category: "domain",
   },
   {
-    id: "domainOption",
-    type: "radio",
-    question: "Domain options",
-    options: ["Get a free custom domain", "Use my existing domain"],
-    required: true,
-    validationMessage: "Please select a domain option",
+    id: "domainProvider",
+    type: "text",
+    question: "Who is your domain provider?",
+    placeholder: "e.g., GoDaddy, Namecheap, Google Domains",
+    required: false,
     condition: {
       questionId: "hasDomain",
       expectedAnswer: "Yes",
+    },
+    category: "domain",
+  },
+  {
+    id: "existingDomainChoice",
+    type: "radio",
+    question: "Domain options",
+    subtext: "Your Business/Enterprise plan includes a free custom domain",
+    options: ["Keep using my existing domain", "Get a free custom domain"],
+    required: true,
+    condition: {
+      questionId: "hasDomain",
+      expectedAnswer: "Yes",
+    },
+    planCondition: {
+      type: "plan",
+      plans: ["business", "enterprise"],
+    },
+    category: "domain",
+  },
+  {
+    id: "wantFreeDomain",
+    type: "radio",
+    question: "Would you like a free custom domain?",
+    subtext: "Your Business/Enterprise plan includes a free domain name",
+    options: ["Yes", "No"],
+    required: true,
+    validationMessage: "Please select an option",
+    condition: {
+      questionId: "hasDomain",
+      expectedAnswer: "No",
     },
     planCondition: {
       type: "plan",
@@ -253,10 +283,10 @@ export const questionsData: Question[] = [
     type: "domainSearch",
     question: "Select your free domain",
     placeholder: "Search for a domain (e.g: yourbusiness)",
-    required: false,
+    required: true,
     condition: {
-      questionId: "domainOption",
-      expectedAnswer: "Get a free custom domain",
+      questionId: "wantFreeDomain",
+      expectedAnswer: "Yes",
     },
     planCondition: {
       type: "plan",
@@ -273,7 +303,7 @@ export const questionsData: Question[] = [
     required: true,
     condition: {
       questionId: "hasDomain",
-      expectedAnswer: "Yes",
+      expectedAnswer: "No",
     },
     planCondition: {
       type: "plan",
@@ -284,10 +314,14 @@ export const questionsData: Question[] = [
   // --- EMAIL ADDRESSES ---
   {
     id: "professionalEmails",
-    type: "professionalEmails", // New type we'll create for this component
+    type: "professionalEmails",
     question: "Set up your professional email addresses",
     subtext: "Create email addresses for your business that match your domain",
     required: false,
+    condition: {
+      questionId: "hasDomain",
+      expectedAnswer: ["Yes", "No"],
+    },
     planCondition: {
       type: "plan",
       plans: ["launch", "business", "enterprise"],
