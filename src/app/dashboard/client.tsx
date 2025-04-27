@@ -448,25 +448,174 @@ export default function Dashboard() {
       }
     }, 100);
   };
+  // Replace your current renderField function with this safer version
   const renderField = (field: any): string => {
     if (field === undefined || field === null) {
       return "";
     }
+
     if (typeof field === "string") {
       return field;
     }
+
     if (Array.isArray(field)) {
       if (field.length === 0) return "";
       return field
         .map((item) => (typeof item === "string" ? item : renderField(item)))
         .join(", ");
     }
+
     if (typeof field === "object") {
+      // Handle common properties we know about
       if ("name" in field) return field.name as string;
       if ("url" in field) return field.url as string;
-      return JSON.stringify(field);
+
+      // For React elements or components that might cause circular references
+      if (field.$$typeof || field._owner || field._store) {
+        return "[React Component]";
+      }
+
+      // For other complex objects, return a simplified representation
+      try {
+        // Use a simple object description instead of full JSON conversion
+        const keys = Object.keys(field).slice(0, 3); // Just get the first few keys
+        if (keys.length === 0) return "{}";
+
+        return `{${keys.map((k) => `${k}: ...`).join(", ")}${
+          Object.keys(field).length > 3 ? ", ..." : ""
+        }}`;
+      } catch (e) {
+        return "[Complex Object]";
+      }
     }
+
     return String(field);
+  };
+
+  const RenderComplexField = ({ field }: { field: any }) => {
+    // Handle null/undefined
+    if (field === undefined || field === null) {
+      return <span className="text-gray-400">None</span>;
+    }
+
+    // Handle arrays
+    if (Array.isArray(field)) {
+      if (field.length === 0)
+        return <span className="text-gray-400">None</span>;
+
+      return (
+        <div className="space-y-1">
+          {field.map((item, idx) => (
+            <div key={idx}>
+              {typeof item === "string" ? (
+                <span>{item}</span>
+              ) : (
+                <RenderComplexField field={item} />
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Handle objects
+    if (typeof field === "object") {
+      // Special handling for business hours
+      if (field.mondayHours || field.tuesdayHours) {
+        const daysOfWeek = [
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+          "sunday",
+        ];
+
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {daysOfWeek.map((day) => {
+              const hoursKey = `${day}Hours`;
+              const hours = field[hoursKey];
+
+              return (
+                <div
+                  key={day}
+                  className="flex items-center justify-between py-1 border-b border-gray-200"
+                >
+                  <span className="text-sm font-medium text-gray-700">
+                    {day.charAt(0).toUpperCase() + day.slice(1)}
+                  </span>
+                  <span className="text-sm text-gray-800">
+                    {hours === "closed" ? (
+                      <span className="text-red-500">Closed</span>
+                    ) : hours ? (
+                      hours
+                    ) : (
+                      <span className="text-gray-400">Not specified</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+
+      // Emails special handling
+      if (field.professionalEmails) {
+        try {
+          const emailData =
+            typeof field.professionalEmails === "string"
+              ? JSON.parse(field.professionalEmails)
+              : field.professionalEmails;
+
+          const emails = Array.isArray(emailData) ? emailData : [];
+          const domain =
+            field.domainName || field.customDomainName || "example.com";
+
+          return (
+            <div className="space-y-1">
+              {emails.length > 0 ? (
+                emails.map((email, index) => (
+                  <div key={index} className="flex items-center">
+                    <Mail className="h-4 w-4 text-gray-400 mr-2" />
+                    <p className="text-sm text-gray-800">
+                      {email}@{domain}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No email addresses configured
+                </p>
+              )}
+            </div>
+          );
+        } catch (e) {
+          return (
+            <p className="text-sm text-gray-500">
+              Email configuration not valid
+            </p>
+          );
+        }
+      }
+
+      // For other objects with common properties
+      if ("name" in field) return <span>{field.name}</span>;
+      if ("url" in field) return <span>{field.url}</span>;
+
+      // For React elements or components, don't try to render them as strings
+      if (field.$$typeof || field._owner || field._store) {
+        return <span className="text-gray-500 font-normal">No data found</span>;
+      }
+
+      // For other objects, show a simple representation
+      return <span className="text-gray-500">Complex Object</span>;
+    }
+
+    // Default: convert to string
+    return <span>{String(field)}</span>;
   };
 
   // Use the verified data if available, otherwise fall back to context data
@@ -991,79 +1140,60 @@ export default function Dashboard() {
                       </div>
 
                       {/* Design Inspiration */}
-                      <div className="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB]">
-                        <div className="flex items-center mb-4">
-                          <div className="w-10 h-10 rounded-full bg-[#FFF8F3] flex items-center justify-center mr-3">
-                            <Lightbulb className="h-5 w-5 text-[#F58327]" />
-                          </div>
-                          <span className="text-base font-semibold text-[#111827]">
-                            Design Inspiration
-                          </span>
-                        </div>
-                        <div className="space-y-4">
-                          {renderField(
-                            displayData?.questionnaireAnswers
-                              ?.websiteInspiration ? (
-                              <div className="bg-[#F9FAFB] p-3 rounded-lg">
-                                <p className="text-sm text-[#111827]">
-                                  {renderField(
-                                    displayData.questionnaireAnswers
-                                      .websiteInspiration
-                                  )}
-                                </p>
-                              </div>
-                            ) : (
-                              <p className="text-sm text-[#6B7280] italic">
-                                No design inspiration provided
-                              </p>
-                            )
-                          )}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">
+                          Website Inspiration
+                        </p>
+                        <p className="text-sm text-gray-800">
+                          {typeof displayData?.questionnaireAnswers
+                            ?.websiteInspiration === "string"
+                            ? displayData.questionnaireAnswers
+                                .websiteInspiration
+                            : "No inspiration provided"}
+                        </p>
 
-                          {/* Website Examples */}
-                          {displayData?.questionnaireAnswers?.websiteExamples &&
+                        {/* If you have website examples */}
+                        {displayData?.questionnaireAnswers?.websiteExamples &&
                           Array.isArray(
                             displayData.questionnaireAnswers.websiteExamples
                           ) &&
                           displayData.questionnaireAnswers.websiteExamples
-                            .length > 0 ? (
-                            <div className="mt-4">
-                              <h4 className="text-xs font-medium text-[#6B7280] mb-2">
-                                Website Examples
-                              </h4>
-                              <div className="space-y-2">
+                            .length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-xs text-gray-500 mb-1">
+                                Example Websites
+                              </p>
+                              <div className="space-y-1">
                                 {displayData.questionnaireAnswers.websiteExamples.map(
                                   (site, index) => (
                                     <div
                                       key={index}
-                                      className="bg-[#F0F9FF] p-2 rounded flex items-center"
+                                      className="flex items-center"
                                     >
-                                      <Globe className="h-4 w-4 text-[#3B82F6] mr-2" />
-                                      <div>
-                                        <p className="text-sm font-medium text-[#111827]">
-                                          {site.name}
-                                        </p>
-                                        {site.url && (
-                                          <a
-                                            href={
-                                              site.url.startsWith("http")
-                                                ? site.url
-                                                : `https://${site.url}`
-                                            }
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-[#3B82F6] hover:underline"
-                                          >
-                                            {site.url}
-                                          </a>
-                                        )}
-                                      </div>
+                                      <Globe className="h-3 w-3 text-gray-400 mr-1" />
+                                      <span className="text-sm text-gray-800">
+                                        {site.name}
+                                      </span>
+                                      {site.url && (
+                                        <a
+                                          href={
+                                            site.url.startsWith("http")
+                                              ? site.url
+                                              : `https://${site.url}`
+                                          }
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="ml-1 text-xs text-blue-500 hover:underline"
+                                        >
+                                          {site.url}
+                                        </a>
+                                      )}
                                     </div>
                                   )
                                 )}
                               </div>
                             </div>
-                          ) : null}
-                        </div>
+                          )}
                       </div>
 
                       {/* Website Pages */}
@@ -1886,69 +2016,61 @@ export default function Dashboard() {
                         </div>
 
                         {/* Professional Email */}
-                        <div className="bg-[#F9FAFB] rounded-lg p-4 border border-[#E5E7EB]">
-                          <h4 className="text-sm font-medium text-[#6B7280] mb-2">
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">
                             Professional Email
-                          </h4>
-                          {renderField(
-                            displayData?.questionnaireAnswers
-                              ?.professionalEmails ? (
-                              <div className="space-y-2">
-                                {(() => {
-                                  try {
-                                    const emails = JSON.parse(
-                                      renderField(
-                                        displayData.questionnaireAnswers
-                                          .professionalEmails
-                                      )
+                          </p>
+                          {(() => {
+                            try {
+                              // Handle the data directly
+                              const emailStr =
+                                typeof displayData?.questionnaireAnswers
+                                  ?.professionalEmails === "string"
+                                  ? displayData?.questionnaireAnswers
+                                      ?.professionalEmails
+                                  : JSON.stringify(
+                                      displayData?.questionnaireAnswers
+                                        ?.professionalEmails || "[]"
                                     );
-                                    if (
-                                      Array.isArray(emails) &&
-                                      emails.length > 0
-                                    ) {
-                                      const domain =
-                                        renderField(
-                                          displayData?.questionnaireAnswers
-                                            ?.domainName
-                                        ) ||
-                                        renderField(
-                                          displayData?.questionnaireAnswers
-                                            ?.customDomainName
-                                        ) ||
-                                        "yourbusiness.com";
 
-                                      return emails.map((email, index) => (
-                                        <div
-                                          key={index}
-                                          className="flex items-center"
-                                        >
-                                          <Mail className="h-4 w-4 text-gray-400 mr-2" />
-                                          <p className="text-sm text-[#111827]">
-                                            {email}@{domain}
-                                          </p>
-                                        </div>
-                                      ));
-                                    }
-                                    return (
-                                      <p className="text-sm text-[#6B7280]">
-                                        No email addresses configured
-                                      </p>
-                                    );
-                                  } catch (e) {
-                                    return (
-                                      <p className="text-sm text-[#6B7280]">
-                                        Email configuration not valid
-                                      </p>
-                                    );
-                                  }
-                                })()}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-[#6B7280]">
-                                No professional emails configured
-                              </p>
-                            )
-                          )}
+                              const emails = JSON.parse(emailStr);
+                              const domain =
+                                displayData?.questionnaireAnswers?.domainName ||
+                                displayData?.questionnaireAnswers
+                                  ?.customDomainName ||
+                                "example.com";
+
+                              return (
+                                <div className="space-y-2">
+                                  {Array.isArray(emails) &&
+                                  emails.length > 0 ? (
+                                    emails.map((email, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center"
+                                      >
+                                        <Mail className="h-4 w-4 text-gray-400 mr-2" />
+                                        <p className="text-sm text-gray-800">
+                                          {email}@{domain}
+                                        </p>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-gray-500">
+                                      No email addresses configured
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            } catch (e) {
+                              console.error("Error parsing emails:", e);
+                              return (
+                                <p className="text-sm text-gray-500">
+                                  Email configuration not valid
+                                </p>
+                              );
+                            }
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -2021,68 +2143,63 @@ export default function Dashboard() {
                     </div>
 
                     {/* Business Hours */}
-                    <div className="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB] mb-6">
-                      <div className="flex items-center mb-5">
-                        <div className="w-8 h-8 rounded-full bg-[#ECFDF5] flex items-center justify-center mr-3">
-                          <Clock className="h-4 w-4 text-[#10B981]" />
-                        </div>
-                        <h3 className="text-base font-semibold text-[#111827]">
-                          Business Hours
-                        </h3>
-                      </div>
-
-                      {renderField(
-                        displayData?.questionnaireAnswers?.businessHours ? (
-                          <div className="bg-[#F9FAFB] rounded-lg p-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {[
-                                "Monday",
-                                "Tuesday",
-                                "Wednesday",
-                                "Thursday",
-                                "Friday",
-                                "Saturday",
-                                "Sunday",
-                              ].map((day) => {
-                                const hoursKey = `${day.toLowerCase()}Hours`;
-                                const hours =
-                                  displayData?.questionnaireAnswers
-                                    ?.businessHours?.[hoursKey];
-
-                                return (
-                                  <div
-                                    key={day}
-                                    className="flex items-center justify-between py-1 border-b border-gray-200"
-                                  >
-                                    <span className="text-sm font-medium text-[#4B5563]">
-                                      {day}
-                                    </span>
-                                    <span className="text-sm text-[#111827]">
-                                      {hours === "closed" ? (
-                                        <span className="text-red-500">
-                                          Closed
-                                        </span>
-                                      ) : hours ? (
-                                        hours
-                                      ) : (
-                                        <span className="text-gray-400">
-                                          Not specified
-                                        </span>
-                                      )}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="bg-[#F9FAFB] rounded-lg p-4 text-center">
-                            <p className="text-sm text-[#6B7280]">
-                              No business hours specified
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-1">
+                        Business Hours
+                      </p>
+                      {(() => {
+                        const businessHours =
+                          displayData?.questionnaireAnswers?.businessHours;
+                        if (!businessHours)
+                          return (
+                            <p className="text-sm text-gray-500">
+                              No business hours provided
                             </p>
+                          );
+
+                        const daysOfWeek = [
+                          "Monday",
+                          "Tuesday",
+                          "Wednesday",
+                          "Thursday",
+                          "Friday",
+                          "Saturday",
+                          "Sunday",
+                        ];
+
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {daysOfWeek.map((day) => {
+                              const hoursKey = `${day.toLowerCase()}Hours`;
+                              const hours = businessHours[hoursKey];
+
+                              return (
+                                <div
+                                  key={day}
+                                  className="flex items-center justify-between py-1 border-b border-gray-200"
+                                >
+                                  <span className="text-sm font-medium text-gray-700">
+                                    {day}
+                                  </span>
+                                  <span className="text-sm text-gray-800">
+                                    {hours === "closed" ? (
+                                      <span className="text-red-500">
+                                        Closed
+                                      </span>
+                                    ) : hours ? (
+                                      hours
+                                    ) : (
+                                      <span className="text-gray-400">
+                                        Not specified
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
-                        )
-                      )}
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
