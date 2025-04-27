@@ -100,21 +100,43 @@ export default function QuestionnairePage() {
       if (!question.condition) return true;
 
       // Get the answer to the condition question
-      const conditionAnswer = answers[question.condition.questionId];
-
-      // If the condition answer doesn't exist, don't include the question
-      if (conditionAnswer === undefined || conditionAnswer === null)
+      const questionId = question.condition.questionId;
+      
+      // Handle both string and string[] for questionId
+      if (Array.isArray(questionId)) {
+        // If questionId is an array, check if any of the questions match
+        for (const qId of questionId) {
+          const conditionAnswer = answers[qId];
+          
+          // Skip if no answer for this condition question
+          if (conditionAnswer === undefined || conditionAnswer === null) continue;
+          
+          // Check if answer matches expected answer
+          if (Array.isArray(question.condition.expectedAnswer)) {
+            if (question.condition.expectedAnswer.includes(conditionAnswer as string)) {
+              return true;
+            }
+          } else if (conditionAnswer === question.condition.expectedAnswer) {
+            return true;
+          }
+        }
         return false;
-
-      // Check if answer matches expected answer
-      if (Array.isArray(question.condition.expectedAnswer)) {
-        return question.condition.expectedAnswer.includes(
-          conditionAnswer as string
-        );
       } else {
-        return conditionAnswer === question.condition.expectedAnswer;
+        // If questionId is a single string
+        const conditionAnswer = answers[questionId];
+        
+        // If the condition answer doesn't exist, don't include the question
+        if (conditionAnswer === undefined || conditionAnswer === null) return false;
+        
+        // Check if answer matches expected answer
+        if (Array.isArray(question.condition.expectedAnswer)) {
+          return question.condition.expectedAnswer.includes(conditionAnswer as string);
+        } else {
+          return conditionAnswer === question.condition.expectedAnswer;
+        }
       }
-    });
+    );
+  );
 
     // Sort questions by category to ensure logical grouping
     const sortedQuestions = [...filteredQuestions].sort((a, b) => {
