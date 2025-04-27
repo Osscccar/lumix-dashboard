@@ -162,8 +162,9 @@ export async function middleware(request: NextRequest) {
       "https://*.doubleclick.net " +
       "https://stats.g.doubleclick.net " +
       "https://*.googleadservices.com " +
-      "https://api.10web.io " + // Added 10web API domain
-      // Add localhost connections for development
+      "https://api.10web.io " +
+      "https://www.google.com " + // Added for Google Ads conversion tracking
+      "https://googleads.g.doubleclick.net " + // Optional: for additional Google Ads functionality
       (isDev ? "localhost:* ws://localhost:* " : "") +
       "; " +
       // Updated frame-src to include doubleclick.net
