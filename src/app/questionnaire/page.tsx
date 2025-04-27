@@ -84,6 +84,7 @@ export default function QuestionnairePage() {
   // Filter questions based on conditional logic
   useEffect(() => {
     // Filter questions based on conditions and plan type
+    // Filter questions based on conditions and plan type
     const filteredQuestions = questionsData.filter((question) => {
       // First check plan-specific condition if it exists
       if (question.planCondition) {
@@ -99,21 +100,23 @@ export default function QuestionnairePage() {
       // If question has no condition, always include it (subject to plan restrictions above)
       if (!question.condition) return true;
 
-      // Get the answer to the condition question
-      const questionId = question.condition.questionId;
-      
       // Handle both string and string[] for questionId
-      if (Array.isArray(questionId)) {
+      if (Array.isArray(question.condition.questionId)) {
         // If questionId is an array, check if any of the questions match
-        for (const qId of questionId) {
+        for (const qId of question.condition.questionId) {
           const conditionAnswer = answers[qId];
-          
+
           // Skip if no answer for this condition question
-          if (conditionAnswer === undefined || conditionAnswer === null) continue;
-          
+          if (conditionAnswer === undefined || conditionAnswer === null)
+            continue;
+
           // Check if answer matches expected answer
           if (Array.isArray(question.condition.expectedAnswer)) {
-            if (question.condition.expectedAnswer.includes(conditionAnswer as string)) {
+            if (
+              question.condition.expectedAnswer.includes(
+                conditionAnswer as string
+              )
+            ) {
               return true;
             }
           } else if (conditionAnswer === question.condition.expectedAnswer) {
@@ -123,20 +126,23 @@ export default function QuestionnairePage() {
         return false;
       } else {
         // If questionId is a single string
-        const conditionAnswer = answers[questionId];
-        
+        const conditionAnswer =
+          answers[question.condition.questionId as string];
+
         // If the condition answer doesn't exist, don't include the question
-        if (conditionAnswer === undefined || conditionAnswer === null) return false;
-        
+        if (conditionAnswer === undefined || conditionAnswer === null)
+          return false;
+
         // Check if answer matches expected answer
         if (Array.isArray(question.condition.expectedAnswer)) {
-          return question.condition.expectedAnswer.includes(conditionAnswer as string);
+          return question.condition.expectedAnswer.includes(
+            conditionAnswer as string
+          );
         } else {
           return conditionAnswer === question.condition.expectedAnswer;
         }
       }
-    );
-  );
+    });
 
     // Sort questions by category to ensure logical grouping
     const sortedQuestions = [...filteredQuestions].sort((a, b) => {
