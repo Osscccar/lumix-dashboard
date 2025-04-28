@@ -1139,7 +1139,6 @@ export const TeamMembersInput = ({
     index: number,
     file: File
   ): Promise<void> => {},
-
   addTeamMember = () => {},
   removeTeamMember = () => {},
   addTeamMemberSocial = () => {},
@@ -1147,17 +1146,10 @@ export const TeamMembersInput = ({
   subtext,
   isUploading = false,
 }: QuestionComponentProps) => {
-  const [showCreateForm, setShowCreateForm] = useState(true);
-  const [newMemberName, setNewMemberName] = useState("");
-  const [newMemberPosition, setNewMemberPosition] = useState("");
-  const [newMemberDescription, setNewMemberDescription] = useState("");
-  const [newMemberImage, setNewMemberImage] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTeamIndex, setActiveTeamIndex] = useState<number | null>(null);
   const [uploadingMemberIndex, setUploadingMemberIndex] = useState<
     number | null
   >(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputExistingRef = useRef<HTMLInputElement>(null);
 
   const platformIcons: { [key: string]: React.ReactNode } = {
@@ -1175,73 +1167,19 @@ export const TeamMembersInput = ({
   const teamMembers = (answers[questionId] as TeamMember[]) || [];
   const maxTeamMembers = 8;
 
-  // Reset form state when team members change
-  useEffect(() => {
-    if (teamMembers.length === 0) {
-      setShowCreateForm(true);
-    }
-  }, [teamMembers]);
-
-  const handleNewImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setNewMemberImage(file);
-
-      // Create a preview URL
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-    }
-  };
-
-  // Clean up preview URL when component unmounts
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
-
-  const handleCreateMember = async () => {
-    if (!newMemberName || !newMemberPosition || !newMemberDescription) {
-      return; // Don't create a member without required fields
-    }
-
-    // Add the team member first
+  // Add a new empty team member and immediately open the edit form
+  const addNewTeamMember = () => {
     addTeamMember();
 
-    // Set a timeout to ensure the team member is added before updating
-    setTimeout(async () => {
+    // Set a timeout to ensure the team member is added before setting it as active
+    setTimeout(() => {
       const newIndex = teamMembers.length;
-
-      // Update the member details
-      handleTeamMemberChange(newIndex, "name", newMemberName);
-      handleTeamMemberChange(newIndex, "position", newMemberPosition);
-      handleTeamMemberChange(newIndex, "description", newMemberDescription);
-
-      // Upload the image if one was selected
-      if (newMemberImage && handleTeamMemberImageUpload) {
-        setUploadingMemberIndex(newIndex);
-        await handleTeamMemberImageUpload(newIndex, newMemberImage);
-        setUploadingMemberIndex(null);
-      }
-
-      // Reset the form
-      setNewMemberName("");
-      setNewMemberPosition("");
-      setNewMemberDescription("");
-      setNewMemberImage(null);
-      setPreviewUrl(null);
-
-      // Show the new member details
       setActiveTeamIndex(newIndex);
-      setShowCreateForm(false);
-    }, 100);
+    }, 50);
   };
 
   const handleExistingImageClick = (index: number) => {
     if (fileInputExistingRef.current) {
-      // Store the index to use when file is selected
       fileInputExistingRef.current.dataset.index = index.toString();
       fileInputExistingRef.current.click();
     }
@@ -1268,105 +1206,6 @@ export const TeamMembersInput = ({
   return (
     <div className="space-y-6 mt-4">
       {subtext && <p className="text-neutral-400 text-sm mb-4">{subtext}</p>}
-
-      {/* Create new team member form */}
-      {showCreateForm && teamMembers.length < maxTeamMembers && (
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5">
-          <h3 className="text-lg font-medium text-white mb-4">
-            Add Team Member
-          </h3>
-
-          <div className="flex items-start mb-6">
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="w-20 h-20 flex-shrink-0 bg-neutral-800 rounded-full flex items-center justify-center mr-4 cursor-pointer overflow-hidden border-2 border-dashed border-neutral-700 hover:border-[#F58327] transition-colors"
-            >
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Camera className="h-8 w-8 text-neutral-600" />
-              )}
-              <input
-                type="file"
-                className="hidden"
-                onChange={handleNewImageChange}
-                accept="image/*"
-                ref={fileInputRef}
-              />
-            </div>
-
-            <div className="flex-1">
-              <div className="mb-3">
-                <label className="block text-xs text-neutral-500 mb-1">
-                  Name*
-                </label>
-                <input
-                  type="text"
-                  value={newMemberName}
-                  onChange={(e) => setNewMemberName(e.target.value)}
-                  placeholder="Full name"
-                  className="w-full bg-neutral-800 rounded border border-neutral-700 px-3 py-2 text-white focus:border-[#F58327] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-neutral-500 mb-1">
-                  Position*
-                </label>
-                <input
-                  type="text"
-                  value={newMemberPosition}
-                  onChange={(e) => setNewMemberPosition(e.target.value)}
-                  placeholder="Job title"
-                  className="w-full bg-neutral-800 rounded border border-neutral-700 px-3 py-2 text-white focus:border-[#F58327] focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-xs text-neutral-500 mb-1">
-              Description*
-            </label>
-            <textarea
-              value={newMemberDescription}
-              onChange={(e) => setNewMemberDescription(e.target.value)}
-              placeholder="Brief bio or description"
-              rows={3}
-              className="w-full bg-neutral-800 rounded border border-neutral-700 px-3 py-2 text-white focus:border-[#F58327] focus:outline-none resize-none"
-            />
-          </div>
-
-          <div className="flex space-x-3 justify-end">
-            {teamMembers.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                className="px-3 py-2 text-sm border border-neutral-600 text-neutral-300 rounded-md hover:bg-neutral-800 transition-colors"
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleCreateMember}
-              disabled={
-                !newMemberName ||
-                !newMemberPosition ||
-                !newMemberDescription ||
-                isUploading
-              }
-              className="px-4 py-2 text-sm bg-[#F58327] text-white rounded-md hover:bg-[#e67016] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Add Team Member
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* List of existing team members */}
       {teamMembers.length > 0 && (
@@ -1600,26 +1439,24 @@ export const TeamMembersInput = ({
 
       {/* Add team member button */}
       {teamMembers.length < maxTeamMembers ? (
-        !showCreateForm && (
-          <button
-            type="button"
-            onClick={() => setShowCreateForm(true)}
-            disabled={isUploading}
-            className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Team Member ({teamMembers.length}/{maxTeamMembers})
-              </>
-            )}
-          </button>
-        )
+        <button
+          type="button"
+          onClick={addNewTeamMember}
+          disabled={isUploading}
+          className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isUploading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Team Member ({teamMembers.length}/{maxTeamMembers})
+            </>
+          )}
+        </button>
       ) : (
         <p className="text-center text-neutral-500 text-sm">
           Maximum of {maxTeamMembers} team members reached
@@ -1637,7 +1474,6 @@ export const ServicesInput = ({
     _index: number,
     _file: File
   ): Promise<void> => {
-    // Empty implementation that returns a Promise
     return Promise.resolve();
   },
   addService = () => {},
@@ -1645,81 +1481,45 @@ export const ServicesInput = ({
   subtext,
   isUploading = false,
 }: QuestionComponentProps) => {
-  const [showCreateForm, setShowCreateForm] = useState(true);
-  const [newServiceName, setNewServiceName] = useState("");
-  const [newServiceDescription, setNewServiceDescription] = useState("");
-  const [newServicePrice, setNewServicePrice] = useState("");
-  const [newServiceImage, setNewServiceImage] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeServiceIndex, setActiveServiceIndex] = useState<number | null>(
     null
   );
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingServiceIndex, setUploadingServiceIndex] = useState<
+    number | null
+  >(null);
   const fileInputExistingRef = useRef<HTMLInputElement>(null);
 
   const services = (answers[questionId] as Service[]) || [];
   const maxServices = 3;
 
-  const handleNewImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setNewServiceImage(file);
-
-      // Create a preview URL
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-
-      // Clean up the URL when component unmounts
-      return () => URL.revokeObjectURL(url);
-    }
-  };
-
-  const handleCreateService = async () => {
-    if (!newServiceName || !newServiceDescription) {
-      return; // Don't create a service without required fields
-    }
-
-    // Add the service first
+  // Add a new service and immediately set all required fields
+  const handleAddService = () => {
+    // Call addService to create an entry
     addService();
 
-    // Set a timeout to ensure the service is added before updating
-    setTimeout(async () => {
+    // Set a timeout to ensure the service is added before updating fields
+    setTimeout(() => {
+      // Get the index of the new service
       const newIndex = services.length;
 
-      // Update the service details
-      handleServiceChange(newIndex, "name", newServiceName);
-      handleServiceChange(newIndex, "description", newServiceDescription);
-      if (newServicePrice) {
-        handleServiceChange(newIndex, "price", newServicePrice);
-      }
+      // Initialize with empty but valid values
+      handleServiceChange(newIndex, "name", "New Service");
+      handleServiceChange(newIndex, "description", "Service description");
+      handleServiceChange(newIndex, "price", "");
 
-      // Upload the image if one was selected
-      if (newServiceImage && handleServiceImageUpload) {
-        await handleServiceImageUpload(newIndex, newServiceImage);
-      }
-
-      // Reset the form
-      setNewServiceName("");
-      setNewServiceDescription("");
-      setNewServicePrice("");
-      setNewServiceImage(null);
-      setPreviewUrl(null);
-
-      // Show the new service details
+      // Open the new service for editing
       setActiveServiceIndex(newIndex);
-      setShowCreateForm(false);
     }, 100);
   };
 
   const handleExistingImageClick = (index: number) => {
     if (fileInputExistingRef.current) {
-      // Store the index to use when file is selected
       fileInputExistingRef.current.dataset.index = index.toString();
       fileInputExistingRef.current.click();
     }
   };
 
-  const handleExistingImageChange = (
+  const handleExistingImageChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     if (
@@ -1730,107 +1530,26 @@ export const ServicesInput = ({
     ) {
       const index = parseInt(fileInputExistingRef.current.dataset.index);
       if (handleServiceImageUpload) {
-        handleServiceImageUpload(index, e.target.files[0]);
+        setUploadingServiceIndex(index);
+        await handleServiceImageUpload(index, e.target.files[0]);
+        setUploadingServiceIndex(null);
       }
     }
   };
 
+  // Ensure we immediately expand a service if it's the only one and has empty fields
+  useEffect(() => {
+    if (
+      services.length === 1 &&
+      (!services[0].name || !services[0].description)
+    ) {
+      setActiveServiceIndex(0);
+    }
+  }, [services]);
+
   return (
     <div className="space-y-6 mt-4">
       {subtext && <p className="text-neutral-400 text-sm mb-4">{subtext}</p>}
-
-      {/* Create new service form */}
-      {showCreateForm && services.length < maxServices && (
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5">
-          <h3 className="text-lg font-medium text-white mb-4">Add Service</h3>
-
-          <div className="flex items-start mb-6">
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="w-20 h-20 flex-shrink-0 bg-neutral-800 rounded-md flex items-center justify-center mr-4 cursor-pointer overflow-hidden border-2 border-dashed border-neutral-700 hover:border-[#F58327] transition-colors"
-            >
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Package className="h-8 w-8 text-neutral-600" />
-              )}
-              <input
-                type="file"
-                className="hidden"
-                onChange={handleNewImageChange}
-                accept="image/*"
-                ref={fileInputRef}
-              />
-            </div>
-
-            <div className="flex-1">
-              <div className="mb-3">
-                <label className="block text-xs text-neutral-500 mb-1">
-                  Service Name*
-                </label>
-                <input
-                  type="text"
-                  value={newServiceName}
-                  onChange={(e) => setNewServiceName(e.target.value)}
-                  placeholder="Service name"
-                  className="w-full bg-neutral-800 rounded border border-neutral-700 px-3 py-2 text-white focus:border-[#F58327] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-neutral-500 mb-1">
-                  Price (Optional)
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-500" />
-                  <input
-                    type="text"
-                    value={newServicePrice}
-                    onChange={(e) => setNewServicePrice(e.target.value)}
-                    placeholder="e.g., $99, $50-$200, or Starting at $149"
-                    className="w-full bg-neutral-800 rounded border border-neutral-700 pl-10 pr-3 py-2 text-white focus:border-[#F58327] focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-xs text-neutral-500 mb-1">
-              Description*
-            </label>
-            <textarea
-              value={newServiceDescription}
-              onChange={(e) => setNewServiceDescription(e.target.value)}
-              placeholder="What makes this service unique? Include quality, pricing, or other important factors."
-              rows={3}
-              className="w-full bg-neutral-800 rounded border border-neutral-700 px-3 py-2 text-white focus:border-[#F58327] focus:outline-none resize-none"
-            />
-          </div>
-
-          <div className="flex space-x-3 justify-end">
-            <button
-              type="button"
-              onClick={() => setShowCreateForm(false)}
-              className="px-3 py-2 text-sm border border-neutral-600 text-neutral-300 rounded-md hover:bg-neutral-800 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleCreateService}
-              disabled={!newServiceName || !newServiceDescription}
-              className="px-4 py-2 text-sm bg-[#F58327] text-white rounded-md hover:bg-[#e67016] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Add Service
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* List of existing services */}
       {services.length > 0 && (
@@ -1877,17 +1596,26 @@ export const ServicesInput = ({
               <div className="flex items-center space-x-3">
                 {/* Service image */}
                 <div
-                  className="w-16 h-16 bg-neutral-800 rounded-md flex items-center justify-center cursor-pointer overflow-hidden"
+                  className="w-16 h-16 bg-neutral-800 rounded-md flex items-center justify-center cursor-pointer overflow-hidden relative"
                   onClick={() => handleExistingImageClick(index)}
                 >
-                  {service.image ? (
+                  {uploadingServiceIndex === index ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                      <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    </div>
+                  ) : service.image ? (
                     <img
                       src={service.image.url}
                       alt={service.name}
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Package className="h-8 w-8 text-neutral-500" />
+                    <>
+                      <Package className="h-8 w-8 text-neutral-500" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black/40 transition-opacity">
+                        <Camera className="h-5 w-5 text-white" />
+                      </div>
+                    </>
                   )}
                 </div>
 
@@ -1973,26 +1701,24 @@ export const ServicesInput = ({
 
       {/* Add service button */}
       {services.length < maxServices ? (
-        !showCreateForm && (
-          <button
-            type="button"
-            onClick={() => setShowCreateForm(true)}
-            disabled={isUploading}
-            className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Service ({services.length}/{maxServices})
-              </>
-            )}
-          </button>
-        )
+        <button
+          type="button"
+          onClick={handleAddService}
+          disabled={isUploading}
+          className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isUploading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Service ({services.length}/{maxServices})
+            </>
+          )}
+        </button>
       ) : (
         <p className="text-center text-neutral-500 text-sm">
           Maximum of {maxServices} services reached

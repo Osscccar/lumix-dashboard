@@ -971,7 +971,7 @@ export default function Dashboard() {
                             >
                               <Edit className="h-6 w-6 text-[#F58327] mb-2" />
                               <span className="text-sm font-medium text-[#4B5563]">
-                                Open Editor
+                                Open Wordpress Editor
                               </span>
                             </a>
                           ) : (
@@ -979,7 +979,7 @@ export default function Dashboard() {
                               <div className="flex flex-col items-center justify-center p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB] opacity-60 cursor-not-allowed">
                                 <Edit className="h-6 w-6 text-[#A1A1AA] mb-2" />
                                 <span className="text-sm font-medium text-[#A1A1AA]">
-                                  Open Editor
+                                  Open Wordpress Editor
                                 </span>
                               </div>
                               {/* Tooltip */}
@@ -989,7 +989,9 @@ export default function Dashboard() {
                             </div>
                           )}
 
-                          {displayData?.revisionsUrl ? (
+                          {/*
+
+                                                    {displayData?.revisionsUrl ? (
                             <a
                               href={
                                 displayData.revisionsUrl.startsWith("http")
@@ -1011,12 +1013,14 @@ export default function Dashboard() {
                                   Open Revisions Tool
                                 </span>
                               </div>
-                              {/* Tooltip */}
+                              
                               <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                                 Your project is still in progress
                               </div>
                             </div>
                           )}
+
+                           */}
 
                           <button
                             onClick={handleSupport}
@@ -1062,7 +1066,7 @@ export default function Dashboard() {
                           <p className="text-base text-[#111827]">
                             {renderField(
                               displayData?.questionnaireAnswers
-                                ?.businessIndustry
+                                ?.businessCategory
                             ) || "Not specified"}
                           </p>
                         </div>
@@ -1140,60 +1144,53 @@ export default function Dashboard() {
                       </div>
 
                       {/* Design Inspiration */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-xs text-gray-500 mb-1">
-                          Website Inspiration
-                        </p>
-                        <p className="text-sm text-gray-800">
-                          {typeof displayData?.questionnaireAnswers
-                            ?.websiteInspiration === "string"
-                            ? displayData.questionnaireAnswers
-                                .websiteInspiration
-                            : "No inspiration provided"}
-                        </p>
+                      <div className="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB]">
+                        <div className="flex items-center mb-4">
+                          <div className="w-10 h-10 rounded-full bg-[#F0F9FF] flex items-center justify-center mr-3">
+                            <Globe className="h-5 w-5 text-[#0EA5E9]" />
+                          </div>
+                          <span className="text-base font-semibold text-[#111827]">
+                            Website Inspiration
+                          </span>
+                        </div>
 
-                        {/* If you have website examples */}
-                        {displayData?.questionnaireAnswers?.websiteExamples &&
-                          Array.isArray(
-                            displayData.questionnaireAnswers.websiteExamples
-                          ) &&
-                          displayData.questionnaireAnswers.websiteExamples
-                            .length > 0 && (
-                            <div className="mt-2">
-                              <p className="text-xs text-gray-500 mb-1">
-                                Example Websites
-                              </p>
-                              <div className="space-y-1">
-                                {displayData.questionnaireAnswers.websiteExamples.map(
-                                  (site, index) => (
-                                    <div
-                                      key={index}
-                                      className="flex items-center"
+                        {displayData?.questionnaireAnswers?.favoriteWebsites &&
+                        Array.isArray(
+                          displayData.questionnaireAnswers.favoriteWebsites
+                        ) &&
+                        displayData.questionnaireAnswers.favoriteWebsites
+                          .length > 0 ? (
+                          <div className="space-y-2">
+                            {displayData.questionnaireAnswers.favoriteWebsites.map(
+                              (site, index) => (
+                                <div key={index} className="flex items-center">
+                                  <Globe className="h-4 w-4 text-gray-400 mr-2" />
+                                  <span className="text-sm text-[#111827] font-medium">
+                                    {site.name}
+                                  </span>
+                                  {site.url && (
+                                    <a
+                                      href={
+                                        site.url.startsWith("http")
+                                          ? site.url
+                                          : `https://${site.url}`
+                                      }
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="ml-2 text-xs text-[#3B82F6] hover:underline"
                                     >
-                                      <Globe className="h-3 w-3 text-gray-400 mr-1" />
-                                      <span className="text-sm text-gray-800">
-                                        {site.name}
-                                      </span>
-                                      {site.url && (
-                                        <a
-                                          href={
-                                            site.url.startsWith("http")
-                                              ? site.url
-                                              : `https://${site.url}`
-                                          }
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="ml-1 text-xs text-blue-500 hover:underline"
-                                        >
-                                          {site.url}
-                                        </a>
-                                      )}
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            </div>
-                          )}
+                                      {site.url}
+                                    </a>
+                                  )}
+                                </div>
+                              )
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[#6B7280] italic">
+                            No inspiration websites provided
+                          </p>
+                        )}
                       </div>
 
                       {/* Website Pages */}
@@ -1346,7 +1343,7 @@ export default function Dashboard() {
                         {/* Team Photos */}
                         <div>
                           <h4 className="text-sm font-medium text-[#4B5563] mb-3">
-                            Team Photos
+                            Other Photos
                           </h4>
                           {displayData?.questionnaireAnswers?.teamPhotos &&
                           Array.isArray(
@@ -1464,17 +1461,6 @@ export default function Dashboard() {
                           </p>
                         </div>
 
-                        {/* Business Tagline */}
-                        <div className="border-b border-[#F0F1F6] pb-4">
-                          <h4 className="text-sm font-medium text-[#6B7280] mb-1">
-                            Business Tagline
-                          </h4>
-                          <p className="text-base text-[#111827]">
-                            {displayData?.questionnaireAnswers
-                              ?.businessTagline || "Not provided"}
-                          </p>
-                        </div>
-
                         {/* Business Description */}
                         <div className="border-b border-[#F0F1F6] pb-4">
                           <h4 className="text-sm font-medium text-[#6B7280] mb-1">
@@ -1489,12 +1475,12 @@ export default function Dashboard() {
                         {/* Business Goals */}
                         <div className="border-b border-[#F0F1F6] pb-4">
                           <h4 className="text-sm font-medium text-[#6B7280] mb-1">
-                            Business Goals
+                            Business Story
                           </h4>
                           <p className="text-base text-[#111827]">
                             {renderField(
                               displayData?.questionnaireAnswers
-                                ?.businessGoals || "Not provided"
+                                ?.businessStory || "Not provided"
                             )}
                           </p>
                         </div>
@@ -1520,20 +1506,7 @@ export default function Dashboard() {
                           <p className="text-base text-[#111827]">
                             {renderField(
                               displayData?.questionnaireAnswers
-                                ?.businessIndustry || "Not provided"
-                            )}
-                          </p>
-                        </div>
-
-                        {/* Years in Business */}
-                        <div className="pb-4">
-                          <h4 className="text-sm font-medium text-[#6B7280] mb-1">
-                            Years in Business
-                          </h4>
-                          <p className="text-base text-[#111827]">
-                            {renderField(
-                              displayData?.questionnaireAnswers
-                                ?.yearsInBusiness || "Not provided"
+                                ?.businessCategory || "Not provided"
                             )}
                           </p>
                         </div>
@@ -1726,27 +1699,6 @@ export default function Dashboard() {
                       )}
                     </div>
 
-                    {/* Target Audience */}
-                    <div className="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB] mb-6">
-                      <div className="flex items-center mb-5">
-                        <div className="w-8 h-8 rounded-full bg-[#EFF6FF] flex items-center justify-center mr-3">
-                          <Users className="h-4 w-4 text-[#3B82F6]" />
-                        </div>
-                        <h3 className="text-base font-semibold text-[#111827]">
-                          Target Audience
-                        </h3>
-                      </div>
-
-                      <div className="bg-[#F9FAFB] rounded-lg p-4 mb-4">
-                        <p className="text-base text-[#111827]">
-                          {renderField(
-                            displayData?.questionnaireAnswers?.targetAudience ||
-                              "Not provided"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
                     {/* Content Strategy */}
                     <div className="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB] mb-6">
                       <div className="flex items-center mb-5">
@@ -1766,49 +1718,11 @@ export default function Dashboard() {
                           </h4>
                           <p className="text-base text-[#111827]">
                             {renderField(
-                              displayData?.questionnaireAnswers?.primaryCTA ||
+                              displayData?.questionnaireAnswers?.ctaOptions ||
                                 "Not specified"
                             )}
                           </p>
                         </div>
-
-                        {/* Content Tone */}
-                        <div className="bg-[#F9FAFB] rounded-lg p-4">
-                          <h4 className="text-sm font-medium text-[#6B7280] mb-2">
-                            Content Tone
-                          </h4>
-                          <p className="text-base text-[#111827]">
-                            {renderField(
-                              displayData?.questionnaireAnswers?.contentTone
-                                ? Array.isArray(
-                                    displayData.questionnaireAnswers.contentTone
-                                  )
-                                  ? displayData.questionnaireAnswers.contentTone.join(
-                                      ", "
-                                    )
-                                  : displayData.questionnaireAnswers.contentTone
-                                : "Not specified"
-                            )}
-                          </p>
-                        </div>
-
-                        {/* Additional Content Information */}
-                        {renderField(
-                          displayData?.questionnaireAnswers
-                            ?.additionalContent && (
-                            <div className="bg-[#F9FAFB] rounded-lg p-4 md:col-span-2">
-                              <h4 className="text-sm font-medium text-[#6B7280] mb-2">
-                                Additional Content Information
-                              </h4>
-                              <p className="text-base text-[#111827]">
-                                {renderField(
-                                  displayData.questionnaireAnswers
-                                    .additionalContent
-                                )}
-                              </p>
-                            </div>
-                          )
-                        )}
                       </div>
                     </div>
 
@@ -2075,131 +1989,16 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    {/* Contact Information */}
-                    <div className="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB] mb-6">
-                      <div className="flex items-center mb-5">
-                        <div className="w-8 h-8 rounded-full bg-[#EFF6FF] flex items-center justify-center mr-3">
-                          <Phone className="h-4 w-4 text-[#3B82F6]" />
-                        </div>
-                        <h3 className="text-base font-semibold text-[#111827]">
-                          Contact Information
-                        </h3>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Phone Number */}
-                        <div className="bg-[#F9FAFB] rounded-lg p-4">
-                          <h4 className="text-sm font-medium text-[#6B7280] mb-2">
-                            Phone Number
-                          </h4>
-                          <div className="flex items-center">
-                            <Phone className="h-4 w-4 text-gray-400 mr-2" />
-                            <p className="text-base text-[#111827]">
-                              {renderField(
-                                displayData?.questionnaireAnswers
-                                  ?.phoneNumber || "Not provided"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Email */}
-                        <div className="bg-[#F9FAFB] rounded-lg p-4">
-                          <h4 className="text-sm font-medium text-[#6B7280] mb-2">
-                            Email Address
-                          </h4>
-                          <div className="flex items-center">
-                            <Mail className="h-4 w-4 text-gray-400 mr-2" />
-                            <p className="text-base text-[#111827]">
-                              {renderField(
-                                displayData?.questionnaireAnswers
-                                  ?.emailAddress || "Not provided"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Business Address */}
-                        {renderField(
-                          displayData?.questionnaireAnswers
-                            ?.businessAddress && (
-                            <div className="bg-[#F9FAFB] rounded-lg p-4 md:col-span-2">
-                              <h4 className="text-sm font-medium text-[#6B7280] mb-2">
-                                Business Address
-                              </h4>
-                              <div className="flex items-start">
-                                <MapPin className="h-4 w-4 text-gray-400 mr-2 mt-0.5" />
-                                <p className="text-base text-[#111827]">
-                                  {renderField(
-                                    displayData.questionnaireAnswers
-                                      .businessAddress
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-
                     {/* Business Hours */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <p className="text-xs text-gray-500 mb-1">
                         Business Hours
                       </p>
-                      {(() => {
-                        const businessHours =
-                          displayData?.questionnaireAnswers?.businessHours;
-                        if (!businessHours)
-                          return (
-                            <p className="text-sm text-gray-500">
-                              No business hours provided
-                            </p>
-                          );
-
-                        const daysOfWeek = [
-                          "Monday",
-                          "Tuesday",
-                          "Wednesday",
-                          "Thursday",
-                          "Friday",
-                          "Saturday",
-                          "Sunday",
-                        ];
-
-                        return (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {daysOfWeek.map((day) => {
-                              const hoursKey = `${day.toLowerCase()}Hours`;
-                              const hours = businessHours[hoursKey];
-
-                              return (
-                                <div
-                                  key={day}
-                                  className="flex items-center justify-between py-1 border-b border-gray-200"
-                                >
-                                  <span className="text-sm font-medium text-gray-700">
-                                    {day}
-                                  </span>
-                                  <span className="text-sm text-gray-800">
-                                    {hours === "closed" ? (
-                                      <span className="text-red-500">
-                                        Closed
-                                      </span>
-                                    ) : hours ? (
-                                      hours
-                                    ) : (
-                                      <span className="text-gray-400">
-                                        Not specified
-                                      </span>
-                                    )}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
+                      <p className="text-base text-[#111827]">
+                        {renderField(
+                          displayData?.questionnaireAnswers?.businessHours
+                        ) || "Not specified"}
+                      </p>
                     </div>
                   </div>
                 )}
