@@ -4,7 +4,7 @@
 import { useEffect } from "react";
 import { useFirebase } from "@/components/firebase-provider";
 import { motion } from "framer-motion";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 
 // Map of plan types to their stripe payment links
 const STRIPE_PAYMENT_LINKS: Record<string, string> = {
@@ -19,8 +19,12 @@ const STRIPE_PAYMENT_LINKS: Record<string, string> = {
 export default function PlanPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { user, userData, loading } = useFirebase();
   const plan = params.plan as string;
+
+  // Get prefilled_email from URL if it exists
+  const prefilledEmail = searchParams.get("prefilled_email");
 
   useEffect(() => {
     // Wait for loading to complete and user data to be available
@@ -52,9 +56,16 @@ export default function PlanPage() {
       window.location.href = paymentUrl.toString();
     } else {
       // User is not logged in, redirect to sign in page with plan info
-      router.push(`/?plan=${encodeURIComponent(plan)}`);
+      // Also preserve prefilled_email parameter if it exists
+      let redirectUrl = `/?plan=${encodeURIComponent(plan)}`;
+
+      if (prefilledEmail) {
+        redirectUrl += `&prefilled_email=${encodeURIComponent(prefilledEmail)}`;
+      }
+
+      router.push(redirectUrl);
     }
-  }, [plan, user, userData, loading, router]);
+  }, [plan, user, userData, loading, router, prefilledEmail]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d]">
