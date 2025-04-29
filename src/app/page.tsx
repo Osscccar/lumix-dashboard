@@ -57,7 +57,6 @@ export default function SignInPage() {
 
   // Check for plan parameter in URL
   const planParam = searchParams.get("plan");
-  const searchParams = useSearchParams();
 
   // Extract plan details for display if needed
   const planParts = planParam ? planParam.split("-") : [];
@@ -183,8 +182,8 @@ export default function SignInPage() {
     }
   }, [planParam]);
 
+  // Check for prefilled_email parameter in URL
   useEffect(() => {
-    // Check for prefilled_email parameter in URL
     const prefilledEmail = searchParams.get("prefilled_email");
     if (prefilledEmail) {
       setEmail(prefilledEmail);
