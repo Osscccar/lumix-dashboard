@@ -282,11 +282,21 @@ export const RadioInput = ({
   };
 
   const selectedOption = answers[questionId] as string;
-  // Check for hero image upload separately if we're inline
+
+  // Check for hero image upload - the key fix is here
   const fileUpload =
     showUploadInline && questionId === "heroImageOption"
-      ? (answers["heroImageUpload"] as FileUpload)
+      ? answers["heroImageUpload"]
       : undefined;
+
+  // Add debugging to see what's happening with the hero image
+  if (showUploadInline && questionId === "heroImageOption") {
+    console.log("Hero Image Upload debugging:");
+    console.log("- questionId:", questionId);
+    console.log("- selectedOption:", selectedOption);
+    console.log("- heroImageUpload value:", answers["heroImageUpload"]);
+    console.log("- fileUpload variable:", fileUpload);
+  }
 
   return (
     <div className="space-y-5 mt-4">
@@ -320,99 +330,6 @@ export const RadioInput = ({
               {option}
             </label>
           </div>
-
-          {/* Show upload inline when option is selected and it's the upload option */}
-          {showUploadInline &&
-            option.includes("upload") &&
-            selectedOption === option && (
-              <div className="ml-10 mt-4">
-                {fileUpload ? (
-                  <div className="bg-neutral-900 p-4 rounded-lg">
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="text-white text-sm font-medium">
-                        Uploaded Image
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (typeof handleRemoveFile === "function") {
-                            handleRemoveFile();
-                          }
-                        }}
-                        className="cursor-pointer text-red-500 hover:text-red-400"
-                        aria-label="Remove file"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-20 h-20 bg-neutral-800 rounded-md overflow-hidden mr-4 flex items-center justify-center">
-                        <img
-                          src={fileUpload.url}
-                          alt="Preview"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-sm text-white font-medium">
-                          {fileUpload.name}
-                        </p>
-                        <p className="text-xs text-neutral-400 mt-1">
-                          {formatFileSize(fileUpload.size)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className={`border-2 border-dashed ${
-                      dragActive ? "border-[#F58327]" : "border-neutral-600"
-                    } rounded-lg p-4 text-center transition-colors duration-200`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                  >
-                    {isUploading ? (
-                      <div className="py-3 flex flex-col items-center">
-                        <Loader2 className="h-6 w-6 text-[#F58327] animate-spin mb-2" />
-                        <p className="text-neutral-300 text-sm">Uploading...</p>
-                        <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 mt-2 mb-1 overflow-hidden">
-                          <div
-                            className="bg-[#F58327] h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${uploadProgress}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-12 h-12 bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <Camera className="h-5 w-5 text-neutral-400" />
-                        </div>
-                        <p className="text-neutral-300 text-sm mb-2">
-                          Drag and drop or browse to upload
-                        </p>
-                        <div className="relative">
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            onChange={handleChange}
-                            accept="image/*"
-                          />
-                          <button
-                            type="button"
-                            className="cursor-pointer px-3 py-1.5 bg-[#F58327] text-white text-sm rounded-lg hover:bg-[#e67016] transition-colors"
-                          >
-                            Choose File
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
         </motion.div>
       ))}
     </div>

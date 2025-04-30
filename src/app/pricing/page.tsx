@@ -47,6 +47,7 @@ const launchFeatures: Feature[] = [];
 
 const businessFeatures: Feature[] = [
   "Advanced SEO to rank high on Google",
+  "Advanced e-commerce capabilities",
   { text: "FREE custom domain", subtext: "(Eg. www.yourwebsite.com)" },
   {
     text: "3 professional email addresses",

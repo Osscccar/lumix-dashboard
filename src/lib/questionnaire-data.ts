@@ -218,13 +218,6 @@ export const questionsData: Question[] = [
     question: "What's your domain name?",
     placeholder: "yourdomain.com",
     required: true,
-    validationMessage: "Please enter your domain name",
-    validateFn: (value) => {
-      // Simple validation for domain format (without http/https)
-      return /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/.test(
-        value
-      );
-    },
     condition: {
       questionId: "hasDomain",
       expectedAnswer: "Yes",
@@ -547,19 +540,6 @@ export const questionsData: Question[] = [
     options: ["I'll upload my own image", "Please choose one for me"],
     required: true,
     showUploadInline: true,
-    category: "designPreferences",
-  },
-  {
-    id: "heroImageUpload",
-    type: "fileUpload",
-    question: "Upload your hero image",
-    required: true,
-    fileType: "image",
-    acceptedFileTypes: "image/png,image/jpeg,image/jpg",
-    condition: {
-      questionId: "heroImageOption",
-      expectedAnswer: "I'll upload my own image",
-    },
     category: "designPreferences",
   },
 
