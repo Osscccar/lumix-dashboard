@@ -130,7 +130,7 @@ const getPhaseIcon = (phaseName: string, status: string) => {
   if (status === "pending") {
     switch (phaseName.toLowerCase()) {
       case "planning":
-        return <Home className="h-4 w-4 text-[#6B7280]" />;
+        return <Lightbulb className="h-4 w-4 text-[#6B7280]" />;
       case "design":
         return <Palette className="h-4 w-4 text-[#6B7280]" />;
       case "revisions":
@@ -146,7 +146,7 @@ const getPhaseIcon = (phaseName: string, status: string) => {
   if (status === "active") {
     switch (phaseName.toLowerCase()) {
       case "planning":
-        return <Home className="h-4 w-4 text-[#F58327]" />;
+        return <Lightbulb className="h-4 w-4 text-[#F58327]" />;
       case "design":
         return <Palette className="h-4 w-4 text-[#F58327]" />;
       case "revisions":
