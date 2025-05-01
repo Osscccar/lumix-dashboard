@@ -247,6 +247,7 @@ export default function SignInPage() {
           phoneNumber,
           hasPaid: false,
           completedQuestionnaire: false,
+          fulfilled: false,
           createdAt: new Date().toISOString(),
           selectedPlan: extractedSelectedPlan || null,
           planType: extractedPlanType || null,

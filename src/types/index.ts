@@ -33,9 +33,11 @@ export interface UserData {
   subscriptionStatus?: "active" | "canceled" | "pending" | "suspended";
   paymentMethod?: string;
   completedQuestionnaire?: boolean;
+  fulfilled?: boolean;
   questionnaireAnswers?: QuestionnaireAnswers;
   createdAt?: string;
   updatedAt?: string;
+  questionnaireCompletedAt?: string;
   planType?: string;
   billingCycle?: string;
   projectPhases?: ProjectPhase[]; // Added project phases to the user data type

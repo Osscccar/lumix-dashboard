@@ -125,6 +125,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
           emailVerified: true, // Google accounts are already verified
           verifiedAt: new Date().toISOString(),
           authProvider: "google", // Mark the auth provider
+          fulfilled: false,
         };
 
         await setDoc(doc(db, "users", user.uid), userDocData);
@@ -167,6 +168,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
         hasPaid: false,
         subscriptionStatus: "pending", // Set initial subscription status
         completedQuestionnaire: false,
+        fulfilled: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         authProvider: "email", // Mark the auth provider

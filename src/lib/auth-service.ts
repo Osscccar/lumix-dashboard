@@ -68,6 +68,7 @@ export async function createOrUpdateUserFromOAuth(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       authProvider: "google", // Mark that this user came from Google OAuth
+      fulfilled: false,
     };
 
     await setDoc(doc(db, "users", userId), newUserData);
