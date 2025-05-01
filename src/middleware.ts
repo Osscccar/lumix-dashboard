@@ -138,12 +138,17 @@ export async function middleware(request: NextRequest) {
   response.headers.set(
     "Content-Security-Policy",
     "default-src 'self'; " +
+      // Script sources
       `script-src 'self' 'unsafe-inline' ${
         isDev ? "'unsafe-eval'" : ""
-      } https://cdnjs.cloudflare.com https://js.stripe.com https://apis.google.com https://*.googleapis.com https://www.googletagmanager.com https://*.vercel-scripts.com https://*.vercel-insights.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com https://googleads.g.doubleclick.net; ` +
+      } https://cdnjs.cloudflare.com https://js.stripe.com https://apis.google.com https://*.googleapis.com https://www.googletagmanager.com https://*.vercel-scripts.com https://*.vercel-insights.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com https://googleads.g.doubleclick.net https://connect.facebook.net https://www.facebook.com https://*.facebook.com https://*.facebook.net https://*.googleadservices.com; ` +
+      // Style sources
       "style-src 'self' 'unsafe-inline'; " +
-      "img-src 'self' data: blob: https://media.discordapp.net https://www.google.com https://sitechecker.pro https://*.googleapis.com https://*.stripe.com https://*.vercel-insights.com https://*.google-analytics.com https://*.doubleclick.net https://*.googleadservices.com; " +
+      // Image sources
+      "img-src 'self' data: blob: https://media.discordapp.net https://www.google.com https://www.google.com.au https://sitechecker.pro https://*.googleapis.com https://*.stripe.com https://*.vercel-insights.com https://*.google-analytics.com https://*.doubleclick.net https://*.googleadservices.com https://www.facebook.com https://*.facebook.com https://*.fbcdn.net; " +
+      // Font sources
       "font-src 'self'; " +
+      // Connection sources
       "connect-src 'self' " +
       "https://*.firebaseio.com " +
       "https://*.googleapis.com " +
@@ -163,13 +168,19 @@ export async function middleware(request: NextRequest) {
       "https://stats.g.doubleclick.net " +
       "https://*.googleadservices.com " +
       "https://api.10web.io " +
-      "https://www.google.com " + // Added for Google Ads conversion tracking
-      "https://googleads.g.doubleclick.net " + // Optional: for additional Google Ads functionality
+      "https://www.google.com " +
+      "https://www.google.com.au " +
+      "https://googleads.g.doubleclick.net " +
+      "https://*.facebook.com " +
+      "https://*.facebook.net " +
+      "https://connect.facebook.net " +
       (isDev ? "localhost:* ws://localhost:* " : "") +
       "; " +
-      // Updated frame-src to include doubleclick.net
-      "frame-src 'self' https://*.firebaseapp.com https://js.stripe.com https://hooks.stripe.com https://apis.google.com https://www.googletagmanager.com https://*.doubleclick.net https://td.doubleclick.net https://bid.g.doubleclick.net; " +
+      // Frame sources
+      "frame-src 'self' https://*.firebaseapp.com https://js.stripe.com https://hooks.stripe.com https://apis.google.com https://www.googletagmanager.com https://*.doubleclick.net https://td.doubleclick.net https://bid.g.doubleclick.net https://www.facebook.com https://*.facebook.com; " +
+      // Object sources
       "object-src 'none'; " +
+      // Base URI
       "base-uri 'self';"
   );
 

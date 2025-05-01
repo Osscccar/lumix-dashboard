@@ -1,4 +1,3 @@
-// src/app/payment/success/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,10 +7,12 @@ import { updateUserPaymentStatus } from "@/lib/auth-service";
 import { useFirebase } from "@/components/firebase-provider";
 import { motion } from "framer-motion";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import Script from "next/script";
 
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
+    fbq?: (...args: any[]) => void;
   }
 }
 
@@ -26,9 +27,12 @@ export default function PaymentSuccessPage() {
   const sessionId = searchParams.get("session_id");
   const paymentId = searchParams.get("payment_intent") || "direct-payment";
 
+  // Facebook Pixel ID - replace with your actual Pixel ID
+  const FB_PIXEL_ID = "694653996337517";
+
   // Track conversion event
   useEffect(() => {
-    // Make sure gtag is available
+    // Google Analytics tracking
     if (typeof window !== "undefined" && window.gtag) {
       // Directly call gtag
       window.gtag("event", "conversion", {
@@ -53,7 +57,38 @@ export default function PaymentSuccessPage() {
 
       return () => clearTimeout(timer);
     }
-  }, []);
+
+    // Facebook Pixel tracking
+    if (typeof window !== "undefined" && window.fbq) {
+      // Standard conversion event
+      window.fbq("track", "Purchase", {
+        value: userData?.planPrice || 0,
+        currency: "USD",
+        content_ids: [userData?.planType || "unknown"],
+        content_type: "product",
+      });
+      console.log("Facebook Pixel conversion tracking attempted");
+    } else {
+      console.log("Facebook Pixel not available yet");
+
+      // Try again after a slight delay
+      const timerFb = setTimeout(() => {
+        if (window.fbq) {
+          window.fbq("track", "Purchase", {
+            value: userData?.planPrice || 0,
+            currency: "USD",
+            content_ids: [userData?.planType || "unknown"],
+            content_type: "product",
+          });
+          console.log("Delayed Facebook Pixel tracking attempted");
+        } else {
+          console.log("Facebook Pixel still not available after delay");
+        }
+      }, 2000);
+
+      return () => clearTimeout(timerFb);
+    }
+  }, [userData]);
 
   useEffect(() => {
     async function updatePaymentStatus() {
@@ -124,6 +159,31 @@ export default function PaymentSuccessPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-black to-neutral-900 p-6">
+      {/* Facebook Pixel Base Code */}
+      <Script id="facebook-pixel-script" strategy="afterInteractive">
+        {`
+          !function(f,b,e,v,n,t,s)
+          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', '${FB_PIXEL_ID}');
+          fbq('track', 'PageView');
+        `}
+      </Script>
+      <noscript>
+        <img
+          height="1"
+          width="1"
+          style={{ display: "none" }}
+          src={`https://www.facebook.com/tr?id=${FB_PIXEL_ID}&ev=PageView&noscript=1`}
+          alt=""
+        />
+      </noscript>
+
       {/* Add Google Analytics specifically for this page */}
       <GoogleAnalytics gaId="AW-17023467754" />
 
