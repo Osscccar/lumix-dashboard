@@ -62,8 +62,8 @@ export default function PaymentSuccessPage() {
     if (typeof window !== "undefined" && window.fbq) {
       // Standard conversion event
       window.fbq("track", "Purchase", {
-        value: userData?.planPrice || 0,
-        currency: "USD",
+        value: 150,
+        currency: "AUD",
         content_ids: [userData?.planType || "unknown"],
         content_type: "product",
       });
@@ -75,8 +75,8 @@ export default function PaymentSuccessPage() {
       const timerFb = setTimeout(() => {
         if (window.fbq) {
           window.fbq("track", "Purchase", {
-            value: userData?.planPrice || 0,
-            currency: "USD",
+            value: 150,
+            currency: "AUD",
             content_ids: [userData?.planType || "unknown"],
             content_type: "product",
           });
