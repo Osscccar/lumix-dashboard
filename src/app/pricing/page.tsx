@@ -152,9 +152,9 @@ export default function PricingPage() {
   };
 
   const originalSetupFees = {
-    launch: "$400",
-    business: "$500",
-    enterprise: "$600",
+    launch: "$990",
+    business: "$1490",
+    enterprise: "$1990",
   };
 
   const billingText =
