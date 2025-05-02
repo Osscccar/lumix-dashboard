@@ -381,7 +381,7 @@ export default function SignInPage() {
         transition={{ duration: 0.5 }}
       >
         <div className="flex justify-center mb-4">
-          <Image src={lumixlogo} alt="Lumix Logo" width={100} height={40} />
+          <Image src={lumixlogo} alt="Lumix Logo" width={288} height={80} />
         </div>
 
         <div className="text-center mb-8">
