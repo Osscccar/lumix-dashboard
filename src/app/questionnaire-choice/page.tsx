@@ -130,8 +130,8 @@ export default function QuestionnaireChoicePage() {
           <Image
             src={mainLogo}
             alt="Lumix Logo"
-            width={120}
-            height={48}
+            width={240}
+            height={96}
             priority
           />
         </div>

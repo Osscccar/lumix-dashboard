@@ -724,7 +724,7 @@ export default function Dashboard() {
 
         {/* Logo */}
         <div className="flex items-center px-6 py-5 border-b border-[#F0F1F6]">
-          <img src={mainLogo.src} alt="" className="w-25 h-10" />
+          <img src={mainLogo.src} alt="" className="w-50 h-20" />
         </div>
 
         {/* Navigation */}
