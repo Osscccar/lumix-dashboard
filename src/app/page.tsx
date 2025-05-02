@@ -582,7 +582,7 @@ export default function SignInPage() {
               <div className="pt-2">
                 <p className="text-gray-400 text-xs text-center">
                   By {isRegistering ? "registering" : "signing in"}, you agree
-                  to Lumix Digital's{" "}
+                  to WebDash's{" "}
                   <a
                     href="https://webdash.io/tos"
                     target="_blank"

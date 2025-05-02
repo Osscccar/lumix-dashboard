@@ -73,8 +73,8 @@ const unbounded = Unbounded({
 });
 
 export const metadata: Metadata = {
-  title: "Lumix Digital",
-  description: "Client dashboard for Lumix Digital",
+  title: "WebDash",
+  description: "WebDash | Dashboard",
 };
 
 export default function RootLayout({
