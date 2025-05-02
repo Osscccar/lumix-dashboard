@@ -309,7 +309,7 @@ export const questionsData: Question[] = [
     id: "professionalEmails",
     type: "professionalEmails",
     question: "Set up your professional email addresses",
-    subtext: "Create email addresses for your business that match your domain",
+    subtext: "You can skip this question if you do not want a free email.",
     required: false,
     condition: {
       questionId: "hasDomain",
