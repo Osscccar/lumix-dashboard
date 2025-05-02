@@ -584,7 +584,7 @@ export default function SignInPage() {
                   By {isRegistering ? "registering" : "signing in"}, you agree
                   to Lumix Digital's{" "}
                   <a
-                    href="https://lumixdigital.com.au/tos"
+                    href="https://webdash.io/tos"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[#F58327] hover:text-[#e67016] transition-colors underline"

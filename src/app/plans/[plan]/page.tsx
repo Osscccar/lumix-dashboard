@@ -33,7 +33,7 @@ export default function PlanPage() {
     // Validate plan type
     if (!plan || !STRIPE_PAYMENT_LINKS[plan]) {
       console.error("Invalid plan type:", plan);
-      window.location.href = "https://lumixdigital.com.au/pricing";
+      window.location.href = "https://webdash.io/pricing";
       return;
     }
 

@@ -823,11 +823,9 @@ export const ProfessionalEmailsInput = ({
       return answers["domainName"];
     }
 
-    // Case 3: Using our lumixdigital.site domain
-    if (
-      answers["nonPremiumDomainOption"] === "Use mywebsite.lumixdigital.site"
-    ) {
-      return "yourbusiness.lumixdigital.site";
+    // Case 3: Using our webdash.site domain
+    if (answers["nonPremiumDomainOption"] === "Use mywebsite.webdash.site") {
+      return "yourbusiness.webdash.site";
     }
 
     // Default case: no domain yet

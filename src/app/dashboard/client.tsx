@@ -434,7 +434,7 @@ export default function Dashboard() {
 
   // Handle support
   const handleSupport = () => {
-    window.location.href = "https://lumixdigital.com.au/contact";
+    window.location.href = "https://webdash.io/contact";
   };
 
   // Handle chat submission
@@ -824,7 +824,7 @@ export default function Dashboard() {
               </p>
               <button
                 onClick={() =>
-                  (window.location.href = "https://lumixdigital.com.au/blog")
+                  (window.location.href = "https://webdash.io/blog")
                 }
                 className="cursor-pointer mt-3 text-xs font-medium text-[#F58327] flex items-center"
               >
@@ -1916,7 +1916,7 @@ export default function Dashboard() {
                                 </p>
                               </div>
                               <p className="text-sm text-[#6B7280] mt-1">
-                                yourbusiness.lumixdigital.site
+                                yourbusiness.webdash.site
                               </p>
                             </div>
                           ) : (
@@ -2624,7 +2624,7 @@ export default function Dashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <a
-                    href="https://lumixdigital.com.au/blog/building-a-small-business-website"
+                    href="https://webdash.io/blog/building-a-small-business-website"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB] hover:border-[#F58327] transition-colors"
@@ -2639,7 +2639,7 @@ export default function Dashboard() {
                   </a>
 
                   <a
-                    href="https://lumixdigital.com.au/blog"
+                    href="https://webdash.io/blog"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB] hover:border-[#F58327] transition-colors"

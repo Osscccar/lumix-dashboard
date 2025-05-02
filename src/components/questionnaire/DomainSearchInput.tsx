@@ -73,10 +73,10 @@ export const DomainSearchInput = ({
               <p className="text-gray-300 text-sm mt-2">
                 If you have any questions, please contact us at{" "}
                 <a
-                  href="mailto:support@lumixdigital.com.au"
+                  href="mailto:support@webdash.io"
                   className="text-[#F58327] hover:underline"
                 >
-                  support@lumixdigital.com.au
+                  support@webdash.io
                 </a>
               </p>
             </div>

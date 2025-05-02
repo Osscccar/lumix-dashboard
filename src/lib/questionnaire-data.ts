@@ -292,7 +292,7 @@ export const questionsData: Question[] = [
     type: "radio",
     question: "Domain options",
     subtext: "Upgrade to business or enterprise plan for a free custom domain",
-    options: ["Use my existing domain", "Use mywebsite.lumixdigital.site"],
+    options: ["Use my existing domain", "Use mywebsite.webdash.site"],
     required: true,
     condition: {
       questionId: "hasDomain",

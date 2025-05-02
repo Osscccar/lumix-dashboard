@@ -17,9 +17,9 @@ export async function sendVerificationEmail(
   // Add response to return type
   try {
     const data = {
-      from: process.env.MAILGUN_FROM_EMAIL || "noreply@lumixdigital.com.au",
+      from: process.env.MAILGUN_FROM_EMAIL || "noreply@webdash.io",
       to: email,
-      subject: "Verify your Lumix Digital Account",
+      subject: "Verify your WebDash Account",
       text: `Your verification code is: ${verificationCode}`,
       html: `
         <!DOCTYPE html>
@@ -34,7 +34,7 @@ export async function sendVerificationEmail(
             <!-- Header -->
             <tr>
               <td style="background-color: #000000; text-align: center; padding: 20px 0;">
-                <img src="https://app.lumixdigital.com.au/image.png" alt="Lumix Digital" style="max-width: 180px; height: auto;">
+                <img src="https://app.webdash.io/image.png" alt="WebDash" style="max-width: 180px; height: auto;">
               </td>
             </tr>
             
@@ -45,7 +45,7 @@ export async function sendVerificationEmail(
                 
                 <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">Hi there,</p>
                 
-                <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">Thanks for signing up with Lumix Digital! To complete your registration and access our services, please enter the verification code below:</p>
+                <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">Thanks for signing up with WebDash! To complete your registration and access our services, please enter the verification code below:</p>
                 
                 <div style="background-color: #f6f6f6; padding: 20px; border-radius: 6px; margin: 30px 0; text-align: center; border-left: 4px solid #F58327;">
                   <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #F58327;">${verificationCode}</span>
@@ -56,7 +56,7 @@ export async function sendVerificationEmail(
                 <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">If you didn't request this verification code, you can safely ignore this email.</p>
                 
                 <div style="margin-top: 40px;">
-                  <p style="line-height: 1.6; font-size: 16px;">Thanks,<br>The Lumix Digital Team</p>
+                  <p style="line-height: 1.6; font-size: 16px;">Thanks,<br>The WebDash Team</p>
                 </div>
               </td>
             </tr>
@@ -64,7 +64,7 @@ export async function sendVerificationEmail(
             <!-- Footer -->
             <tr>
               <td style="background-color: #f2f2f2; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e5e5;">
-                <p style="margin: 0; font-size: 14px; color: #777; margin-bottom: 10px;">© ${new Date().getFullYear()} Lumix Digital. All rights reserved.</p>
+                <p style="margin: 0; font-size: 14px; color: #777; margin-bottom: 10px;">© ${new Date().getFullYear()} WebDash. All rights reserved.</p>
                 <p style="margin: 0; font-size: 14px; color: #777;">Should you have any questions or need assistance, our support team is here to help.</p>
               </td>
             </tr>
@@ -95,14 +95,14 @@ export async function sendQuestionnaireReminderEmail(
     const isFirstReminder = reminderNumber === 1;
 
     const subject = isFirstReminder
-      ? "Complete your Lumix Digital Questionnaire"
+      ? "Complete your WebDash Questionnaire"
       : "Reminder: Your website questionnaire is waiting";
 
     const data = {
-      from: process.env.MAILGUN_FROM_EMAIL || "noreply@lumixdigital.com.au",
+      from: process.env.MAILGUN_FROM_EMAIL || "noreply@webdash.io",
       to: email,
       subject: subject,
-      text: `It's time to complete your website questionnaire. Visit https://app.lumixdigital.com.au/questionnaire to get started.`,
+      text: `It's time to complete your website questionnaire. Visit https://app.webdash.io/questionnaire to get started.`,
       html: `
         <!DOCTYPE html>
         <html lang="en">
@@ -116,7 +116,7 @@ export async function sendQuestionnaireReminderEmail(
             <!-- Header -->
             <tr>
               <td style="background-color: #000000; text-align: center; padding: 20px 0;">
-                <img src="https://app.lumixdigital.com.au/image.png" alt="Lumix Digital" style="max-width: 180px; height: auto;">
+                <img src="https://app.webdash.io/image.png" alt="WebDash" style="max-width: 180px; height: auto;">
               </td>
             </tr>
             
@@ -136,7 +136,7 @@ export async function sendQuestionnaireReminderEmail(
                 <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">
                   ${
                     isFirstReminder
-                      ? "Thanks for choosing Lumix Digital for your website project! To create a site that perfectly represents your brand and meets your business goals, we need to learn more about your vision and requirements."
+                      ? "Thanks for choosing WebDash for your website project! To create a site that perfectly represents your brand and meets your business goals, we need to learn more about your vision and requirements."
                       : "We noticed you haven't completed your website questionnaire yet. Your input is essential for us to create your perfect website that truly represents your brand and business goals."
                   }
                 </p>
@@ -154,7 +154,7 @@ export async function sendQuestionnaireReminderEmail(
                 <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">The questionnaire should take only 20-45 minutes to complete, and will greatly help us create a website that meets your expectations.</p>
                 
                 <div style="text-align: center; margin: 35px 0;">
-                  <a href="https://app.lumixdigital.com.au/questionnaire" 
+                  <a href="https://app.webdash.io/questionnaire" 
                     style="background-color: #F58327; color: white; padding: 14px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 2px 5px rgba(245, 131, 39, 0.3);">
                     Complete Questionnaire Now
                   </a>
@@ -163,7 +163,7 @@ export async function sendQuestionnaireReminderEmail(
                 <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">If you have any questions or need assistance with the questionnaire, please don't hesitate to contact our support team.</p>
                 
                 <div style="margin-top: 40px;">
-                  <p style="line-height: 1.6; font-size: 16px;">Thanks,<br>The Lumix Digital Team</p>
+                  <p style="line-height: 1.6; font-size: 16px;">Thanks,<br>The WebDash Team</p>
                 </div>
               </td>
             </tr>
@@ -171,8 +171,8 @@ export async function sendQuestionnaireReminderEmail(
             <!-- Footer -->
             <tr>
               <td style="background-color: #f2f2f2; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e5e5;">
-                <p style="margin: 0; font-size: 14px; color: #777; margin-bottom: 10px;">© ${new Date().getFullYear()} Lumix Digital. All rights reserved.</p>
-                <p style="margin: 0; font-size: 14px; color: #777;">Looking for more information? Visit our <a href="https://lumixdigital.com.au" style="color: #F58327; text-decoration: none;">website</a>.</p>
+                <p style="margin: 0; font-size: 14px; color: #777; margin-bottom: 10px;">© ${new Date().getFullYear()} WebDash. All rights reserved.</p>
+                <p style="margin: 0; font-size: 14px; color: #777;">Looking for more information? Visit our <a href="https://webdash.io" style="color: #F58327; text-decoration: none;">website</a>.</p>
               </td>
             </tr>
           </table>
