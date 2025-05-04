@@ -141,7 +141,7 @@ export async function middleware(request: NextRequest) {
       // Script sources
       `script-src 'self' 'unsafe-inline' ${
         isDev ? "'unsafe-eval'" : ""
-      } https://cdnjs.cloudflare.com https://js.stripe.com https://apis.google.com https://*.googleapis.com https://www.googletagmanager.com https://*.vercel-scripts.com https://*.vercel-insights.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com https://googleads.g.doubleclick.net https://connect.facebook.net https://www.facebook.com https://*.facebook.com https://*.facebook.net https://*.googleadservices.com; ` +
+      } https://cdnjs.cloudflare.com https://js.stripe.com https://apis.google.com https://*.googleapis.com https://www.googletagmanager.com https://*.vercel-scripts.com https://*.vercel-insights.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com https://googleads.g.doubleclick.net https://connect.facebook.net https://www.facebook.com https://*.facebook.com https://*.facebook.net https://*.googleadservices.com https://*.posthog.com https://*.i.posthog.com; ` +
       // Style sources
       "style-src 'self' 'unsafe-inline'; " +
       // Image sources
@@ -174,6 +174,10 @@ export async function middleware(request: NextRequest) {
       "https://*.facebook.com " +
       "https://*.facebook.net " +
       "https://connect.facebook.net " +
+      "https://*.posthog.com " +
+      "https://*.i.posthog.com " +
+      "https://us.i.posthog.com " +
+      "https://us-assets.i.posthog.com " +
       (isDev ? "localhost:* ws://localhost:* " : "") +
       "; " +
       // Frame sources
