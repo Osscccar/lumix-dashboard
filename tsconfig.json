@@ -23,6 +23,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/lib/firebase.ts.old", "src/contexts/auth-context.tsx.bak", "src/components/firebase-test.tsx.old", "src/app/api/process-reminders/route.ts.old"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/lib/firebase.ts.old", "src/contexts/auth-context.tsx.bak", "src/components/firebase-test.tsx.old", "src/app/api/process-reminders/route.ts.old", "src/lib/posthog-provider.js"],
   "exclude": ["node_modules"]
 }
