@@ -88,10 +88,7 @@ export default function RootLayout({
       <body className={`${satoshi.variable} ${unbounded.variable}`}>
         <PostHogProvider>
           <GoogleTagManager gtmId="AW-17023467754" />
-          <FirebaseProvider>
-            <PostHogPageView /> {/* Add this component */}
-            {children}
-          </FirebaseProvider>
+          <FirebaseProvider>{children}</FirebaseProvider>
           <Analytics />
           <SpeedInsights />
         </PostHogProvider>
