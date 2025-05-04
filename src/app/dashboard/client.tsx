@@ -9,7 +9,6 @@ import { getUserData } from "@/lib/auth-service";
 import type { UserData } from "@/types";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import {httpsCal}
 
 // Define the project phase types in case they're not already in the types file
 interface ProjectPhase {
