@@ -138,14 +138,20 @@ export async function middleware(request: NextRequest) {
   response.headers.set(
     "Content-Security-Policy",
     "default-src 'self'; " +
-      // Script sources
+      // Script sources - Added PostHog domains with specific permissions for recordings
       `script-src 'self' 'unsafe-inline' ${
         isDev ? "'unsafe-eval'" : ""
-      } https://cdnjs.cloudflare.com https://js.stripe.com https://apis.google.com https://*.googleapis.com https://www.googletagmanager.com https://*.vercel-scripts.com https://*.vercel-insights.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com https://googleads.g.doubleclick.net https://connect.facebook.net https://www.facebook.com https://*.facebook.com https://*.facebook.net https://*.googleadservices.com https://*.posthog.com https://*.i.posthog.com; ` +
-      // Style sources
-      "style-src 'self' 'unsafe-inline'; " +
+      } https://cdnjs.cloudflare.com https://js.stripe.com https://apis.google.com https://*.googleapis.com https://www.googletagmanager.com https://*.vercel-scripts.com https://*.vercel-insights.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com https://googleads.g.doubleclick.net https://connect.facebook.net https://www.facebook.com https://*.facebook.com https://*.facebook.net https://*.googleadservices.com https://*.posthog.com https://app.posthog.com https://*.i.posthog.com https://us.i.posthog.com https://us-assets.i.posthog.com; ` +
+      // Style sources - Added PostHog resources
+      "style-src 'self' 'unsafe-inline' https://*.posthog.com; " +
+      // Media sources for PostHog recordings
+      "media-src 'self' blob: https://*.posthog.com; " +
+      // Worker sources for PostHog recordings
+      "worker-src 'self' blob: https://*.posthog.com; " +
+      // Child sources for PostHog recordings
+      "child-src 'self' blob: https://*.posthog.com; " +
       // Image sources
-      "img-src 'self' data: blob: https://media.discordapp.net https://www.google.com https://www.google.com.au https://sitechecker.pro https://*.googleapis.com https://*.stripe.com https://*.vercel-insights.com https://*.google-analytics.com https://*.doubleclick.net https://*.googleadservices.com https://www.facebook.com https://*.facebook.com https://*.fbcdn.net; " +
+      "img-src 'self' data: blob: https://media.discordapp.net https://www.google.com https://www.google.com.au https://sitechecker.pro https://*.googleapis.com https://*.stripe.com https://*.vercel-insights.com https://*.google-analytics.com https://*.doubleclick.net https://*.googleadservices.com https://www.facebook.com https://*.facebook.com https://*.fbcdn.net https://*.posthog.com; " +
       // Font sources
       "font-src 'self'; " +
       // Connection sources
@@ -175,13 +181,14 @@ export async function middleware(request: NextRequest) {
       "https://*.facebook.net " +
       "https://connect.facebook.net " +
       "https://*.posthog.com " +
+      "https://app.posthog.com " +
       "https://*.i.posthog.com " +
       "https://us.i.posthog.com " +
       "https://us-assets.i.posthog.com " +
       (isDev ? "localhost:* ws://localhost:* " : "") +
       "; " +
       // Frame sources
-      "frame-src 'self' https://*.firebaseapp.com https://js.stripe.com https://hooks.stripe.com https://apis.google.com https://www.googletagmanager.com https://*.doubleclick.net https://td.doubleclick.net https://bid.g.doubleclick.net https://www.facebook.com https://*.facebook.com; " +
+      "frame-src 'self' https://*.firebaseapp.com https://js.stripe.com https://hooks.stripe.com https://apis.google.com https://www.googletagmanager.com https://*.doubleclick.net https://td.doubleclick.net https://bid.g.doubleclick.net https://www.facebook.com https://*.facebook.com https://*.posthog.com; " +
       // Object sources
       "object-src 'none'; " +
       // Base URI
