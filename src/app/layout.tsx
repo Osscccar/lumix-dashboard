@@ -8,7 +8,6 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PostHogProvider } from "./providers";
 import Script from "next/script";
-import SuspendedPostHogPageView from "./PostHogPageView";
 
 // Load Satoshi as a local font with all weights
 const satoshi = localFont({
@@ -89,10 +88,7 @@ export default function RootLayout({
       <body className={`${satoshi.variable} ${unbounded.variable}`}>
         <PostHogProvider>
           <GoogleTagManager gtmId="AW-17023467754" />
-          <FirebaseProvider>
-            {children}
-            <SuspendedPostHogPageView /> {/* Add this component */}
-          </FirebaseProvider>
+          <FirebaseProvider>{children}</FirebaseProvider>
           <Analytics />
           <SpeedInsights />
         </PostHogProvider>
