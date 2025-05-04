@@ -1,24 +1,30 @@
+// src/lib/posthog.tsx
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, ReactNode } from "react";
-import posthog from "posthog-js";
-import { PostHogProvider } from "posthog-js/react";
+
+// Declare the global posthog type for TypeScript
+declare global {
+  interface Window {
+    posthog: any;
+  }
+}
 
 // PostHog PageView component to track navigation changes
-export function PostHogPageView(): JSX.Element | null {
+export function PostHogPageView(): React.ReactElement | null {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (pathname) {
+    if (pathname && typeof window !== "undefined" && window.posthog) {
       let url = window.origin + pathname;
       if (searchParams && searchParams.toString()) {
         url = url + `?${searchParams.toString()}`;
       }
 
       // Send pageview event to PostHog
-      posthog.capture("$pageview", {
+      window.posthog.capture("$pageview", {
         $current_url: url,
       });
     }
@@ -32,18 +38,7 @@ interface PHProviderProps {
   children: ReactNode;
 }
 
-// PostHog Provider component
-export function PHProvider({ children }: PHProviderProps): JSX.Element {
-  useEffect(() => {
-    // Initialize PostHog only on the client side
-    if (typeof window !== "undefined") {
-      posthog.init("phc_deiCeICBs4UTwrHBbd0i3BjusZuSLSNKHcSiWIB8sPM", {
-        api_host: "https://us.i.posthog.com",
-        capture_pageview: false, // We'll handle this manually
-        person_profiles: "identified_only",
-      });
-    }
-  }, []);
-
-  return <PostHogProvider client={posthog}>{children}</PostHogProvider>;
+// PostHog Provider component - simplified since you're using the script tag
+export function PHProvider({ children }: PHProviderProps): React.ReactElement {
+  return <>{children}</>;
 }
