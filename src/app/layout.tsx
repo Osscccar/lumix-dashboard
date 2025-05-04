@@ -7,6 +7,7 @@ import { GoogleTagManager } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PostHogPageView } from "@/lib/posthog";
+import Script from "next/script";
 
 // Load Satoshi as a local font with all weights
 const satoshi = localFont({
