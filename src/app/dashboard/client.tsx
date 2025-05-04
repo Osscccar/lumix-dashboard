@@ -9,6 +9,7 @@ import { getUserData } from "@/lib/auth-service";
 import type { UserData } from "@/types";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import {httpsCal}
 
 // Define the project phase types in case they're not already in the types file
 interface ProjectPhase {
@@ -84,6 +85,7 @@ import {
   Linkedin,
   Youtube,
   MapPin,
+  Laptop,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import mainLogo from "./public/images/mainLogo.png";
@@ -762,7 +764,7 @@ export default function Dashboard() {
                     : "cursor-pointer text-[#4B5563] hover:bg-[#F9FAFB]"
                 }`}
               >
-                <Layers
+                <Laptop
                   className={`mr-3 h-4.5 w-4.5 ${
                     activeTab === "project"
                       ? "text-[#F58327]"
