@@ -15,7 +15,6 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
         capture_pageview: false, // Disable automatic pageview capture, as we capture manually
         session_recording: {
-          enabled: true,
           maskAllInputs: false, // Set to true if you want to mask all input values
           maskInputOptions: {
             password: true,
@@ -24,11 +23,12 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
           },
         },
       });
-      // Check if session recording is enabled
-      console.log(
-        "Session recording enabled:",
-        posthog.sessionRecording?.__enabled
-      );
+
+      // Enable session recording manually after initialization
+      if (posthog.sessionRecording) {
+        posthog.sessionRecording.startRecordingIfEnabled();
+        console.log("Session recording started");
+      }
     } else {
       console.warn("PostHog environment variables are not set");
     }
