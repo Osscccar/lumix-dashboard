@@ -86,6 +86,85 @@ export async function sendVerificationEmail(
   }
 }
 
+// New function for password reset emails using Mailgun
+export async function sendPasswordResetEmail(
+  email: string,
+  resetLink: string
+): Promise<{ success: boolean; error?: any; response?: any }> {
+  try {
+    const data = {
+      from: process.env.MAILGUN_FROM_EMAIL || "noreply@lumix-digital.com",
+      to: email,
+      subject: "Reset your password for Webdash",
+      text: `Follow this link to reset your Webdash password: ${resetLink}`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Password Reset</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; background-color: #f9f9f9;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <!-- Header -->
+            <tr>
+              <td style="background-color: #000000; text-align: center; padding: 20px 0;">
+                <img src="https://app.webdash.io/image.png" alt="Lumix Digital" style="max-width: 180px; height: auto;">
+              </td>
+            </tr>
+            
+            <!-- Content -->
+            <tr>
+              <td style="padding: 40px 30px;">
+                <h1 style="color: #F58327; margin-top: 0; margin-bottom: 20px; font-size: 24px; text-align: center;">Reset Your Password</h1>
+                
+                <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">Hello,</p>
+                
+                <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">We received a request to reset the password for your Webdash account. Click the button below to reset it:</p>
+                
+                <div style="text-align: center; margin: 35px 0;">
+                  <a href="${resetLink}" 
+                    style="background-color: #F58327; color: white; padding: 14px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 2px 5px rgba(245, 131, 39, 0.3);">
+                    Reset Password
+                  </a>
+                </div>
+                
+                <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;"><strong>This link will expire in 30 minutes.</strong></p>
+                
+                <p style="margin-bottom: 25px; line-height: 1.6; font-size: 16px;">If you didn't request to reset your password, you can safely ignore this email.</p>
+                
+                <div style="margin-top: 40px;">
+                  <p style="line-height: 1.6; font-size: 16px;">Thanks,<br>The Webdash Team</p>
+                </div>
+              </td>
+            </tr>
+            
+            <!-- Footer -->
+            <tr>
+              <td style="background-color: #f2f2f2; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e5e5;">
+                <p style="margin: 0; font-size: 14px; color: #777; margin-bottom: 10px;">© ${new Date().getFullYear()} Webdash. All rights reserved.</p>
+                <p style="margin: 0; font-size: 14px; color: #777;">Should you have any questions or need assistance, our support team is here to help.</p>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    };
+
+    const result = await mg.messages.create(
+      process.env.MAILGUN_DOMAIN || "",
+      data
+    );
+
+    return { success: true, response: result };
+  } catch (error) {
+    console.error("Error sending password reset email:", error);
+    return { success: false, error };
+  }
+}
+
 // Send questionnaire reminder email
 export async function sendQuestionnaireReminderEmail(
   email: string,

@@ -6,7 +6,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFirebase } from "@/components/firebase-provider";
 import { doc, setDoc, getFirestore, getDoc } from "firebase/firestore";
-import { Loader2 } from "lucide-react";
+import { getAuth } from "firebase/auth";
+import { Loader2, ArrowLeft, Mail, Lock, User, Phone } from "lucide-react";
 import Image, { StaticImageData } from "next/image";
 import lumixlogo from "@/app/public/images/image.png";
 import launchLogo from "@/app/public/images/launch.png";
@@ -41,15 +42,17 @@ const planIcons: Record<string, StaticImageData> = {
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, userData, loading, signIn, signUp, signInWithGoogle } =
+  const { user, userData, loading, signIn, signUp, signInWithGoogle, auth } =
     useFirebase();
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [processing, setProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("Processing...");
   const [googleProcessing, setGoogleProcessing] = useState(false);
@@ -119,6 +122,66 @@ export default function SignInPage() {
           : "Failed to sign in with Google. Please try again."
       );
       setGoogleProcessing(false);
+    }
+  };
+
+  // Function to handle password reset
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setProcessing(true);
+
+    if (!email) {
+      setError("Please enter your email address");
+      setProcessing(false);
+      return;
+    }
+
+    try {
+      // Call our custom API endpoint instead of using Firebase directly
+      const response = await fetch("/api/auth/password-reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send password reset email");
+      }
+
+      setSuccess("Password reset email sent! Please check your inbox.");
+
+      // Keep success message visible for a few seconds
+      setTimeout(() => {
+        setIsForgotPassword(false);
+        setProcessing(false);
+      }, 3000);
+    } catch (error) {
+      console.error("Password reset error:", error);
+
+      let errorMessage =
+        "Failed to send password reset email. Please try again.";
+
+      if (error instanceof Error) {
+        if (error.message.includes("user-not-found")) {
+          errorMessage = "No account found with this email address.";
+        } else if (error.message.includes("invalid-email")) {
+          errorMessage = "Please enter a valid email address.";
+        } else if (error.message.includes("network")) {
+          errorMessage =
+            "Network error. Please check your connection and try again.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      setError(errorMessage);
+      setProcessing(false);
     }
   };
 
@@ -329,6 +392,12 @@ export default function SignInPage() {
     exit: { opacity: 0 },
   };
 
+  const slideUp = {
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: 10 },
+  };
+
   // Redirect to pricing if visitor directly hits the main URL without a plan or auth
   useEffect(() => {
     if (!loading && !user && !planParam && window.location.pathname === "/") {
@@ -373,275 +442,497 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d] px-4 py-12 sm:px-6 lg:px-8">
-      <motion.div
-        className="w-full max-w-md"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex justify-center mb-4">
-          <Image src={lumixlogo} alt="Lumix Logo" width={288} height={80} />
-        </div>
-
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold tracking-tight text-white">
-            {isRegistering ? "Create your account" : "Sign in to your account"}
-          </h2>
-          <div className="flex flex-row justify-center items-center mt-2">
-            {planParam && planIcons[planParam] && (
-              <div className="flex mr-2 mt-2">
-                <Image
-                  src={planIcons[planParam]}
-                  alt={`Plan icon for ${planParam}`}
-                  width={30}
-                  height={30}
-                  className="h-6 w-6 rounded-sm"
-                />
-              </div>
-            )}
-            <p className="flex mt-2 text-gray-400">
-              {isRegistering && planParam
-                ? `Register for the ${
-                    planType.charAt(0).toUpperCase() + planType.slice(1)
-                  } ${
-                    billingCycle.charAt(0).toUpperCase() + billingCycle.slice(1)
-                  } Plan`
-                : isRegistering
-                ? "Register to begin the onboarding process"
-                : "Sign in to access your client dashboard"}
-            </p>
-          </div>
-        </div>
-
-        <AnimatePresence mode="wait">
-          {error && (
-            <motion.div
-              className="mb-6 px-4 py-3 border-l-4 border-red-500 bg-[#0d0d0d]"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="text-red-400">{error}</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence mode="wait">
+    <div className="flex min-h-screen bg-[#0d0d0d]">
+      {/* Left side - Branding and Benefits */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center bg-gradient-to-br from-[#0d0d0d] to-[#1a1a1a] p-12">
+        <div className="max-w-md">
           <motion.div
-            key={isRegistering ? "register" : "signin"}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            variants={fadeIn}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-10"
           >
-            {/* Google Sign In Button */}
-            {/* <div className="mb-5">
-              <button
-                onClick={handleGoogleSignIn}
-                className="w-full cursor-pointer flex items-center justify-center bg-white text-gray-800 border border-gray-300 rounded-full px-4 py-3 font-medium hover:bg-gray-50 transition-colors"
-              >
-                <Image
-                  src="/images/google.svg"
-                  alt="Google logo"
-                  width={20}
-                  height={20}
-                  className="mr-3"
-                />
-                {isRegistering
-                  ? "Sign up with Google"
-                  : "Sign in with Google"}
-              </button>
-            </div>
-            */}
-
-            {/* Divider 
-            <div className="flex items-center mb-5">
-              <div className="flex-1 h-px bg-gray-800"></div>
-              <span className="px-3 text-sm text-gray-400">
-                or continue with email
-              </span>
-              <div className="flex-1 h-px bg-gray-800"></div>
-            </div>
-            */}
-
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="email-address"
-                    className="block text-sm font-medium text-gray-300 mb-1"
-                  >
-                    Email Address
-                  </label>
-                  <input
-                    id="email-address"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
-                    placeholder="Enter your email"
-                    style={{ backgroundColor: "transparent" }}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-gray-300 mb-1"
-                  >
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete={
-                      isRegistering ? "new-password" : "current-password"
-                    }
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
-                    placeholder="Enter your password"
-                    style={{ backgroundColor: "transparent" }}
-                  />
-                </div>
-
-                {isRegistering && (
-                  <>
-                    <div>
-                      <label
-                        htmlFor="first-name"
-                        className="block text-sm font-medium text-gray-300 mb-1"
-                      >
-                        First Name
-                      </label>
-                      <input
-                        id="first-name"
-                        name="firstName"
-                        type="text"
-                        autoComplete="given-name"
-                        required
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
-                        placeholder="Enter your first name"
-                        style={{ backgroundColor: "transparent" }}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="last-name"
-                        className="block text-sm font-medium text-gray-300 mb-1"
-                      >
-                        Last Name
-                      </label>
-                      <input
-                        id="last-name"
-                        name="lastName"
-                        type="text"
-                        autoComplete="family-name"
-                        required
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58327] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
-                        placeholder="Enter your last name"
-                        style={{ backgroundColor: "transparent" }}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="phone-number"
-                        className="block text-sm font-medium text-gray-300 mb-1"
-                      >
-                        Phone Number
-                      </label>
-                      <input
-                        id="phone-number"
-                        name="phoneNumber"
-                        type="tel"
-                        autoComplete="tel"
-                        required
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        className="w-full bg-transparent border-b-2 border-gray-800 px-0 py-3 text-white placeholder-gray-500 focus:border-[#F58326] focus:outline-none transition-colors duration-200 appearance-none !bg-transparent"
-                        placeholder="Enter your phone number"
-                        style={{ backgroundColor: "transparent" }}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* TOS Disclaimer */}
-              <div className="pt-2">
-                <p className="text-gray-400 text-xs text-center">
-                  By {isRegistering ? "registering" : "signing in"}, you agree
-                  to WebDash's{" "}
-                  <a
-                    href="https://webdash.io/tos"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#F58327] hover:text-[#e67016] transition-colors underline"
-                  >
-                    Terms of Service
-                  </a>
-                </p>
-              </div>
-
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  disabled={processing || verifyingPaymentStatus}
-                  className="cursor-pointer relative flex items-center justify-center w-full bg-[#F58327] text-white text-lg rounded-full px-8 py-3 min-h-[54px] disabled:opacity-70 disabled:cursor-not-allowed transition-colors duration-200 hover:bg-[#e67016]"
-                >
-                  {processing || verifyingPaymentStatus ? (
-                    <div className="flex items-center">
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Processing...
-                    </div>
-                  ) : isRegistering ? (
-                    "Register with Email"
-                  ) : (
-                    "Sign in with Email"
-                  )}
-                </button>
-              </div>
-
-              <div className="text-center pt-4">
-                {isRegistering ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsRegistering(false);
-                      // Remove plan parameter from URL when switching to sign in
-                      if (planParam) {
-                        router.push("/");
-                      }
-                    }}
-                    className="cursor-pointer text-[#F58327] hover:text-[#e67016] transition-colors duration-200"
-                  >
-                    Already have an account? Sign in
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsRegistering(true)}
-                    className="cursor-pointer text-[#F58327] hover:text-[#e67016] transition-colors duration-200"
-                  >
-                    Don't have an account? Register now
-                  </button>
-                )}
-              </div>
-            </form>
+            <Image src={lumixlogo} alt="Lumix Logo" width={200} height={60} />
           </motion.div>
-        </AnimatePresence>
-      </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-gray-300 text-lg mb-8"
+          >
+            Struggling to launch a website you love? Then we'll help grow your
+            business. Agency service at a fraction of the price.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="flex items-start">
+              <div className="flex-shrink-0 h-6 w-6 rounded-full bg-[#F58327] flex items-center justify-center mr-3 mt-1">
+                <svg
+                  width="14"
+                  height="10"
+                  viewBox="0 0 14 10"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M1 5L5 9L13 1"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <p className="text-gray-300">
+                Professional website for your business
+              </p>
+            </div>
+            <div className="flex items-start">
+              <div className="flex-shrink-0 h-6 w-6 rounded-full bg-[#F58327] flex items-center justify-center mr-3 mt-1">
+                <svg
+                  width="14"
+                  height="10"
+                  viewBox="0 0 14 10"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M1 5L5 9L13 1"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <p className="text-gray-300">
+                30-day money-back guarantee, no risk
+              </p>
+            </div>
+            <div className="flex items-start">
+              <div className="flex-shrink-0 h-6 w-6 rounded-full bg-[#F58327] flex items-center justify-center mr-3 mt-1">
+                <svg
+                  width="14"
+                  height="10"
+                  viewBox="0 0 14 10"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M1 5L5 9L13 1"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <p className="text-gray-300">
+                Get set up in minutes, see results in days
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Right side - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+        <motion.div
+          className="w-full max-w-md"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Mobile logo (only visible on mobile) */}
+          <div className="flex justify-center mb-8 lg:hidden">
+            <Image src={lumixlogo} alt="Lumix Logo" width={200} height={56} />
+          </div>
+
+          <AnimatePresence mode="wait">
+            {/* FORGOT PASSWORD VIEW */}
+            {isForgotPassword ? (
+              <motion.div
+                key="forgot-password"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={fadeIn}
+                transition={{ duration: 0.3 }}
+                className="bg-[#111111] rounded-xl p-8 shadow-lg border border-gray-800"
+              >
+                <button
+                  onClick={() => setIsForgotPassword(false)}
+                  className="text-gray-400 hover:text-white mb-6 flex items-center transition-colors"
+                >
+                  <ArrowLeft size={16} className="mr-1" />
+                  <span>Back to sign in</span>
+                </button>
+
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Reset your password
+                </h2>
+                <p className="text-gray-400 mb-6">
+                  Enter your email address and we'll send you a link to reset
+                  your password.
+                </p>
+
+                {error && (
+                  <motion.div
+                    className="mb-6 px-4 py-3 bg-red-900/30 border border-red-800 rounded-lg text-red-300"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {error}
+                  </motion.div>
+                )}
+
+                {success && (
+                  <motion.div
+                    className="mb-6 px-4 py-3 bg-green-900/30 border border-green-800 rounded-lg text-green-300"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {success}
+                  </motion.div>
+                )}
+
+                <form onSubmit={handlePasswordReset} className="space-y-6">
+                  <div>
+                    <label
+                      htmlFor="email-reset"
+                      className="block text-sm font-medium text-gray-300 mb-2"
+                    >
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-500" />
+                      </div>
+                      <input
+                        id="email-reset"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-3 rounded-lg border border-gray-800 focus:ring-2 focus:ring-[#F58327] focus:border-transparent transition-all duration-200"
+                        placeholder="your@email.com"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={processing}
+                    className="w-full flex justify-center items-center bg-[#F58327] hover:bg-[#e67016] text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F58327]"
+                  >
+                    {processing ? (
+                      <div className="flex items-center">
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Sending...
+                      </div>
+                    ) : (
+                      "Send Reset Link"
+                    )}
+                  </button>
+                </form>
+              </motion.div>
+            ) : (
+              // LOGIN OR REGISTER VIEW
+              <motion.div
+                key={isRegistering ? "register" : "signin"}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={fadeIn}
+                transition={{ duration: 0.3 }}
+                className="bg-[#111111] rounded-xl p-8 shadow-lg border border-gray-800"
+              >
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  {isRegistering ? "Create your account" : "Welcome back"}
+                </h2>
+                <div className="flex items-center mb-6">
+                  {planParam && planIcons[planParam] && (
+                    <div className="flex mr-2">
+                      <Image
+                        src={planIcons[planParam]}
+                        alt={`Plan icon for ${planParam}`}
+                        width={24}
+                        height={24}
+                        className="h-5 w-5 rounded-sm"
+                      />
+                    </div>
+                  )}
+                  <p className="text-gray-400">
+                    {isRegistering && planParam
+                      ? `Sign up for the ${
+                          planType.charAt(0).toUpperCase() + planType.slice(1)
+                        } ${
+                          billingCycle.charAt(0).toUpperCase() +
+                          billingCycle.slice(1)
+                        } Plan`
+                      : isRegistering
+                      ? "Get started with your account"
+                      : "Sign in to your dashboard"}
+                  </p>
+                </div>
+
+                <AnimatePresence mode="wait">
+                  {error && (
+                    <motion.div
+                      className="mb-6 px-4 py-3 bg-red-900/30 border border-red-800 rounded-lg text-red-300"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <form className="space-y-5" onSubmit={handleSubmit}>
+                  <div>
+                    <label
+                      htmlFor="email-address"
+                      className="block text-sm font-medium text-gray-300 mb-2"
+                    >
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-500" />
+                      </div>
+                      <input
+                        id="email-address"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-3 rounded-lg border border-gray-800 focus:ring-2 focus:ring-[#F58327] focus:border-transparent transition-all duration-200"
+                        placeholder="your@email.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label
+                        htmlFor="password"
+                        className="block text-sm font-medium text-gray-300"
+                      >
+                        Password
+                      </label>
+                      {!isRegistering && (
+                        <button
+                          type="button"
+                          onClick={() => setIsForgotPassword(true)}
+                          className="text-sm text-[#F58327] hover:text-[#e67016] transition-colors"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-500" />
+                      </div>
+                      <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        autoComplete={
+                          isRegistering ? "new-password" : "current-password"
+                        }
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-3 rounded-lg border border-gray-800 focus:ring-2 focus:ring-[#F58327] focus:border-transparent transition-all duration-200"
+                        placeholder={
+                          isRegistering ? "Create password" : "Enter password"
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {isRegistering && (
+                      <motion.div
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        variants={slideUp}
+                        className="space-y-5"
+                      >
+                        <div>
+                          <label
+                            htmlFor="first-name"
+                            className="block text-sm font-medium text-gray-300 mb-2"
+                          >
+                            First Name
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <User className="h-5 w-5 text-gray-500" />
+                            </div>
+                            <input
+                              id="first-name"
+                              name="firstName"
+                              type="text"
+                              autoComplete="given-name"
+                              required
+                              value={firstName}
+                              onChange={(e) => setFirstName(e.target.value)}
+                              className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-3 rounded-lg border border-gray-800 focus:ring-2 focus:ring-[#F58327] focus:border-transparent transition-all duration-200"
+                              placeholder="First name"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="last-name"
+                            className="block text-sm font-medium text-gray-300 mb-2"
+                          >
+                            Last Name
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <User className="h-5 w-5 text-gray-500" />
+                            </div>
+                            <input
+                              id="last-name"
+                              name="lastName"
+                              type="text"
+                              autoComplete="family-name"
+                              required
+                              value={lastName}
+                              onChange={(e) => setLastName(e.target.value)}
+                              className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-3 rounded-lg border border-gray-800 focus:ring-2 focus:ring-[#F58327] focus:border-transparent transition-all duration-200"
+                              placeholder="Last name"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="phone-number"
+                            className="block text-sm font-medium text-gray-300 mb-2"
+                          >
+                            Phone Number
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Phone className="h-5 w-5 text-gray-500" />
+                            </div>
+                            <input
+                              id="phone-number"
+                              name="phoneNumber"
+                              type="tel"
+                              autoComplete="tel"
+                              required
+                              value={phoneNumber}
+                              onChange={(e) => setPhoneNumber(e.target.value)}
+                              className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-3 rounded-lg border border-gray-800 focus:ring-2 focus:ring-[#F58327] focus:border-transparent transition-all duration-200"
+                              placeholder="Phone number"
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* TOS Agreement with checkbox */}
+                  <div className="pt-2">
+                    <div className="flex items-start">
+                      <div className="flex items-center h-5">
+                        <input
+                          id="terms"
+                          name="terms"
+                          type="checkbox"
+                          required
+                          className="h-4 w-4 text-[#F58327] focus:ring-[#F58327] border-gray-600 rounded"
+                        />
+                      </div>
+                      <div className="ml-3">
+                        <label
+                          htmlFor="terms"
+                          className="text-xs text-gray-400"
+                        >
+                          By {isRegistering ? "registering" : "signing in"}, I
+                          agree to WebDash's{" "}
+                          <a
+                            href="https://webdash.io/tos"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#F58327] hover:text-[#e67016] transition-colors underline"
+                          >
+                            Terms of Service
+                          </a>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={processing || verifyingPaymentStatus}
+                    className="w-full flex justify-center items-center bg-[#F58327] hover:bg-[#e67016] text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F58327]"
+                  >
+                    {processing || verifyingPaymentStatus ? (
+                      <div className="flex items-center">
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Processing...
+                      </div>
+                    ) : isRegistering ? (
+                      "Create Account"
+                    ) : (
+                      "Sign In"
+                    )}
+                  </button>
+                </form>
+
+                <div className="mt-6 text-center">
+                  {isRegistering ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRegistering(false);
+                        // Remove plan parameter from URL when switching to sign in
+                        if (planParam) {
+                          router.push("/");
+                        }
+                      }}
+                      className="text-[#F58327] hover:text-[#e67016] text-sm font-medium transition-colors"
+                    >
+                      Already have an account? Sign in
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsRegistering(true)}
+                      className="text-[#F58327] hover:text-[#e67016] text-sm font-medium transition-colors"
+                    >
+                      Don't have an account? Register now
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
     </div>
   );
 }
