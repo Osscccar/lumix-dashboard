@@ -42,7 +42,7 @@ const planIcons: Record<string, StaticImageData> = {
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, userData, loading, signIn, signUp, signInWithGoogle, auth } =
+  const { user, userData, loading, signIn, signUp, signInWithGoogle } =
     useFirebase();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
