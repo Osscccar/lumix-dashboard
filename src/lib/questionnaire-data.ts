@@ -281,14 +281,16 @@ export const questionsData: Question[] = [
       questionId: "wantFreeDomain",
       expectedAnswer: "Yes",
     },
-    {
-      questionId: "existingDomainChoice",
-      expectedAnswer: "Get a free custom domain",
-    },
-    planCondition: {
-      type: "plan",
-      plans: ["business", "enterprise"],
-    },
+    condition: [
+      {
+        questionId: "wantFreeDomain",
+        expectedAnswer: "Yes",
+      },
+      {
+        questionId: "existingDomainChoice",
+        expectedAnswer: "Get a free custom domain",
+      },
+    ],
     category: "domain",
   },
   {
