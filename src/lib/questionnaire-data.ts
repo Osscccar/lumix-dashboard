@@ -277,10 +277,6 @@ export const questionsData: Question[] = [
     question: "Select your free domain",
     placeholder: "Search for a domain (e.g: yourbusiness)",
     required: true,
-    condition: {
-      questionId: "wantFreeDomain",
-      expectedAnswer: "Yes",
-    },
     condition: [
       {
         questionId: "wantFreeDomain",
