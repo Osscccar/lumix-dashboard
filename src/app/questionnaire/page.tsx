@@ -1486,7 +1486,7 @@ export default function QuestionnairePage() {
       const success = await saveCompletedQuestionnaire(user.uid, answers);
 
       if (success) {
-        router.push("/dashboard");
+        router.push("/dashboard?came_from_questionnaire_popup=true");
       } else {
         throw new Error("Failed to save questionnaire answers");
       }

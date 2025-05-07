@@ -9,6 +9,8 @@ import { getUserData } from "@/lib/auth-service";
 import type { UserData } from "@/types";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import WebsiteCreationPopup from "@/components/WebsiteCreationPopup";
+import { useWebsitePopup } from "@/hooks/useWebsitePopup";
 
 // Define the project phase types in case they're not already in the types file
 interface ProjectPhase {
@@ -287,6 +289,7 @@ export default function Dashboard() {
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [isSendingFeedback, setIsSendingFeedback] = useState(false);
   const feedbackMessagesRef = useRef<HTMLDivElement>(null);
+  const { showPopup, closePopup } = useWebsitePopup(user?.uid);
 
   // Verify user access from Firestore
   useEffect(() => {
@@ -2656,6 +2659,11 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+          <WebsiteCreationPopup
+            isOpen={showPopup}
+            onClose={closePopup}
+            userId={user?.uid || ""}
+          />
         </main>
       </div>
     </div>
